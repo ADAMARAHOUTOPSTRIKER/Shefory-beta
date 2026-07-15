@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MonChauffeur — Administration</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+body{background:#F1F3F1}
+.app{display:grid;grid-template-columns:238px 1fr;min-height:100vh}
+/* sidebar */
+.side{background:#13201C;color:#cdd6d1;padding:20px 14px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column}
+.side .logo{color:#fff;font-weight:850;font-size:19px;display:flex;align-items:center;gap:9px;padding:6px 10px 20px}
+.side .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+.nav{display:flex;flex-direction:column;gap:3px}
+.nav a{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:11px;font-size:14px;font-weight:600;color:#aebab4}
+.nav a .ic{font-size:17px}
+.nav a.on,.nav a:hover{background:#ffffff14;color:#fff}
+.side .foot{margin-top:auto;display:flex;align-items:center;gap:10px;padding:12px 10px;border-top:1px solid #ffffff1a}
+.side .foot .av{width:34px;height:34px;font-size:12px}
+/* main */
+.main{padding:26px 30px 50px;max-width:1200px}
+.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px}
+.head h1{margin:0;font-size:23px;font-weight:800}
+.head .sub{margin-top:3px}
+.head .actions{display:flex;gap:10px}
+.seg{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:11px;overflow:hidden}
+.seg button{padding:9px 14px;font-size:13px;font-weight:600;color:var(--muted)}
+.seg button.on{background:var(--ink);color:#fff}
+
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:16px 18px;box-shadow:var(--shadow-sm)}
+.kpi .lab{color:var(--muted);font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:7px}
+.kpi .val{font-size:27px;font-weight:850;margin-top:8px;letter-spacing:-.5px}
+.kpi .chg{font-size:12px;font-weight:700;margin-top:5px}
+.up{color:#12805f}.down{color:var(--danger)}
+.kpi .ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:15px;background:var(--primary-tint)}
+
+.grid2{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:18px;box-shadow:var(--shadow-sm)}
+.panel h3{margin:0 0 2px;font-size:15px;font-weight:750}
+.panel .psub{color:var(--muted);font-size:12.5px;margin-bottom:16px}
+
+/* bar chart */
+.chart{display:flex;align-items:flex-end;gap:14px;height:180px;padding-top:10px}
+.bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end}
+.bar{width:60%;max-width:34px;border-radius:7px 7px 0 0;background:linear-gradient(180deg,#12a081,#0E7C66);position:relative}
+.bar span{position:absolute;top:-19px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap}
+.bar-wrap small{color:var(--faint);font-size:11px;font-weight:600}
+
+/* donut */
+.donut-wrap{display:flex;align-items:center;gap:20px}
+.donut{width:130px;height:130px;border-radius:50%;flex:none;
+  background:conic-gradient(#D9A32B 0 46%,#8C97A2 46% 74%,#B87A4B 74% 92%,#E7EAE7 92% 100%);
+  display:grid;place-items:center;position:relative}
+.donut::after{content:"";width:78px;height:78px;background:#fff;border-radius:50%}
+.donut b{position:absolute;font-size:16px;font-weight:800}
+.legend{display:flex;flex-direction:column;gap:9px;font-size:13px}
+.legend div{display:flex;align-items:center;gap:8px}
+.dotc{width:11px;height:11px;border-radius:3px}
+
+/* table */
+.tabs-row{display:flex;gap:8px;margin-bottom:14px}
+.tabs-row button{font-size:13px;font-weight:650;padding:8px 13px;border-radius:9px;color:var(--muted);background:#eef1ef}
+.tabs-row button.on{background:var(--ink);color:#fff}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);font-weight:700;padding:0 10px 10px}
+td{padding:12px 10px;border-top:1px solid var(--line);font-size:13.5px}
+.tr-name{display:flex;align-items:center;gap:10px;font-weight:650}
+.tr-name .av{width:32px;height:32px;font-size:12px}
+.st{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px}
+.st-ok{background:#e3f3ec;color:#0d7a5a}
+.st-pend{background:#fdf0dd;color:#a5701a}
+.st-open{background:#fbe3e3;color:#b63636}
+.st-res{background:#eceff2;color:#5b6670}
+.mini-btn{font-size:12px;font-weight:650;padding:6px 11px;border-radius:8px;background:var(--primary-tint);color:var(--primary-600)}
+.mini-btn.d{background:#fbe3e3;color:#b63636}
+.mini-btn.g{background:#eef1ef;color:var(--muted)}
+.hide{display:none}
+@media(max-width:900px){.app{grid-template-columns:1fr}.side{position:static;height:auto;flex-direction:row;align-items:center;overflow-x:auto}.side .logo{padding:6px 10px}.nav{flex-direction:row}.side .foot{display:none}.kpis{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="side">
+    <div class="logo"><span class="dot"></span>MonChauffeur</div>
+    <nav class="nav">
+      <a class="on" data-p="dash" onclick="nav('dash',this)"><span class="ic">📊</span> Tableau de bord</a>
+      <a data-p="pay" onclick="nav('pay',this)"><span class="ic">💳</span> Paiements</a>
+      <a data-p="disp" onclick="nav('disp',this)"><span class="ic">⚖️</span> Litiges</a>
+      <a data-p="drv" onclick="nav('drv',this)"><span class="ic">🚗</span> Chauffeurs</a>
+      <a onclick="alert('Prototype — écran à venir')"><span class="ic">👥</span> Clients</a>
+      <a onclick="alert('Prototype — écran à venir')"><span class="ic">⚙️</span> Réglages</a>
+    </nav>
+    <div class="foot"><div class="av c1">AD</div><div><div style="color:#fff;font-size:13px;font-weight:700">Admin</div><div style="font-size:11px;color:#8ea099">Super-admin</div></div></div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- ===== DASHBOARD ===== -->
+    <section id="p-dash">
+      <div class="head">
+        <div><h1>Tableau de bord</h1><div class="sub">Vue d'ensemble · Afrique de l'Ouest · FCFA</div></div>
+        <div class="seg"><button class="on">30 jours</button><button>90 jours</button><button>12 mois</button></div>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi"><div class="lab"><span class="ic">🚗</span> Chauffeurs actifs</div><div class="val">1 247</div><div class="chg up">▲ 8,2% vs mois préc.</div></div>
+        <div class="kpi"><div class="lab"><span class="ic">⭐</span> Abonnements payants</div><div class="val">834</div><div class="chg up">▲ 12,5%</div></div>
+        <div class="kpi"><div class="lab"><span class="ic">💰</span> Revenu mensuel (MRR)</div><div class="val">6,42 M</div><div class="chg up">▲ 9,1% · FCFA</div></div>
+        <div class="kpi"><div class="lab"><span class="ic">⚖️</span> Litiges ouverts</div><div class="val">7</div><div class="chg down">▲ 2 à traiter</div></div>
+      </div>
+
+      <div class="grid2">
+        <div class="panel">
+          <h3>Revenu d'abonnements</h3>
+          <div class="psub">Recettes mensuelles, 8 derniers mois (millions FCFA)</div>
+          <div class="chart" id="chart"></div>
+        </div>
+        <div class="panel">
+          <h3>Répartition par pack</h3>
+          <div class="psub">834 abonnements actifs</div>
+          <div class="donut-wrap">
+            <div class="donut"><b>834</b></div>
+            <div class="legend">
+              <div><span class="dotc" style="background:#D9A32B"></span> Or — 384 <span class="sub">(46%)</span></div>
+              <div><span class="dotc" style="background:#8C97A2"></span> Argent — 234 <span class="sub">(28%)</span></div>
+              <div><span class="dotc" style="background:#B87A4B"></span> Bronze — 150 <span class="sub">(18%)</span></div>
+              <div><span class="dotc" style="background:#E7EAE7"></span> Gratuit — 413</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div><h3>Activité récente</h3><div class="psub" style="margin:0">Derniers paiements & événements</div></div>
+          <button class="mini-btn" onclick="nav('pay',document.querySelector('[data-p=pay]'))">Tout voir</button>
+        </div>
+        <table>
+          <thead><tr><th>Chauffeur</th><th>Événement</th><th>Pack</th><th>Montant</th><th>Statut</th><th>Date</th></tr></thead>
+          <tbody id="recent"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== PAIEMENTS ===== -->
+    <section id="p-pay" class="hide">
+      <div class="head"><div><h1>Paiements</h1><div class="sub">Transactions d'abonnements · Mobile Money & carte</div></div>
+        <div class="actions"><button class="btn btn-ghost">⬇ Exporter CSV</button></div></div>
+      <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+        <div class="kpi"><div class="lab">Encaissé ce mois</div><div class="val">6,42 M</div><div class="chg up">FCFA</div></div>
+        <div class="kpi"><div class="lab">En attente</div><div class="val">312 K</div><div class="chg">4 transactions</div></div>
+        <div class="kpi"><div class="lab">Taux d'échec</div><div class="val">2,1%</div><div class="chg up">▼ 0,4%</div></div>
+      </div>
+      <div class="panel">
+        <div class="tabs-row"><button class="on">Toutes</button><button>Réussies</button><button>En attente</button><button>Échouées</button></div>
+        <table>
+          <thead><tr><th>Transaction</th><th>Chauffeur</th><th>Moyen</th><th>Pack</th><th>Montant</th><th>Statut</th><th></th></tr></thead>
+          <tbody id="payTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== LITIGES ===== -->
+    <section id="p-disp" class="hide">
+      <div class="head"><div><h1>Litiges</h1><div class="sub">Signalements clients ↔ chauffeurs à arbitrer</div></div></div>
+      <div class="panel">
+        <div class="tabs-row"><button class="on">Ouverts (7)</button><button>En cours</button><button>Résolus</button></div>
+        <table>
+          <thead><tr><th>#</th><th>Parties</th><th>Motif</th><th>Priorité</th><th>Statut</th><th>Action</th></tr></thead>
+          <tbody id="dispTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== CHAUFFEURS ===== -->
+    <section id="p-drv" class="hide">
+      <div class="head"><div><h1>Chauffeurs</h1><div class="sub">Vérification des documents & modération</div></div></div>
+      <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+        <div class="kpi"><div class="lab">À vérifier</div><div class="val">23</div><div class="chg down">Documents en attente</div></div>
+        <div class="kpi"><div class="lab">Vérifiés</div><div class="val">1 224</div><div class="chg up">98% de la base</div></div>
+        <div class="kpi"><div class="lab">Suspendus</div><div class="val">5</div><div class="chg">Modération</div></div>
+      </div>
+      <div class="panel">
+        <div class="tabs-row"><button class="on">À vérifier</button><button>Actifs</button><button>Suspendus</button></div>
+        <table>
+          <thead><tr><th>Chauffeur</th><th>Ville</th><th>Pack</th><th>Documents</th><th>Statut</th><th>Action</th></tr></thead>
+          <tbody id="drvTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+/* nav */
+function nav(p,el){
+  ['dash','pay','disp','drv'].forEach(x=>document.getElementById('p-'+x).classList.add('hide'));
+  document.getElementById('p-'+p).classList.remove('hide');
+  document.querySelectorAll('.nav a').forEach(a=>a.classList.remove('on'));el.classList.add('on');
+  window.scrollTo(0,0);
+}
+/* chart */
+const data=[3.1,3.4,3.9,4.2,4.8,5.3,5.9,6.42];const labels=['Déc','Jan','Fév','Mar','Avr','Mai','Jun','Jul'];
+const max=Math.max(...data);
+document.getElementById('chart').innerHTML=data.map((v,i)=>`
+  <div class="bar-wrap"><div class="bar" style="height:${v/max*100}%;${i===data.length-1?'background:linear-gradient(180deg,#F2A03D,#e0891f)':''}"><span>${v}M</span></div><small>${labels[i]}</small></div>`).join('');
+
+/* recent activity */
+const av=(i,c,cls)=>`<div class="av ${cls||''}" style="background:${c}">${i}</div>`;
+const recent=[
+  ['IN','Ibrahima Ndiaye','Renouvellement','Or','15 000','ok',"Aujourd'hui"],
+  ['AT','Aïcha Traoré','Nouvel abonnement','Argent','7 000','ok',"Aujourd'hui"],
+  ['KM','Kwame Mensah','Renouvellement','Or','15 000','ok','Hier'],
+  ['FD','Fatou Diallo','Nouvel abonnement','Bronze','3 000','pend','Hier'],
+  ['MK','Moussa Koné','Échec paiement','Argent','7 000','fail','2 j'],
+];
+const stmap={ok:['st-ok','Réussi'],pend:['st-pend','En attente'],fail:['st-open','Échec']};
+document.getElementById('recent').innerHTML=recent.map(r=>`
+  <tr><td><div class="tr-name"><div class="av c3" style="width:32px;height:32px;font-size:12px">${r[0]}</div>${r[1]}</div></td>
+  <td>${r[2]}</td><td>${r[3]}</td><td><b>${r[4]} FCFA</b></td>
+  <td><span class="st ${stmap[r[5]][0]}">${stmap[r[5]][1]}</span></td><td class="sub">${r[6]}</td></tr>`).join('');
+
+/* payments table */
+const pays=[
+  ['#PAY-8842','IN','Ibrahima Ndiaye','🌊 Wave','Or','15 000','ok'],
+  ['#PAY-8841','AT','Aïcha Traoré','🟠 Orange Money','Argent','7 000','ok'],
+  ['#PAY-8840','KM','Kwame Mensah','🌊 Wave','Or','15 000','ok'],
+  ['#PAY-8839','FD','Fatou Diallo','🟡 MTN MoMo','Bronze','3 000','pend'],
+  ['#PAY-8838','MK','Moussa Koné','💳 Carte','Argent','7 000','fail'],
+  ['#PAY-8837','—','Aminata Ba','🔵 Moov Money','Argent','7 000','ok'],
+];
+document.getElementById('payTable').innerHTML=pays.map(p=>`
+  <tr><td><b>${p[0]}</b></td><td>${p[2]}</td><td>${p[3]}</td><td>${p[4]}</td><td><b>${p[5]} FCFA</b></td>
+  <td><span class="st ${stmap[p[6]][0]}">${stmap[p[6]][1]}</span></td>
+  <td>${p[6]==='fail'?'<button class="mini-btn">Relancer</button>':'<button class="mini-btn g">Reçu</button>'}</td></tr>`).join('');
+
+/* disputes */
+const disp=[
+  ['#L-142','Mariam S. ↔ Moussa K.','Chauffeur non présenté','Haute','open'],
+  ['#L-141','Omar D. ↔ Fatou D.','Désaccord sur le tarif','Moyenne','open'],
+  ['#L-140','Awa N. ↔ Kwame M.','Comportement inapproprié','Haute','open'],
+  ['#L-139','Client ↔ Ibrahima N.','Retard répété','Basse','open'],
+];
+const prio={Haute:'st-open',Moyenne:'st-pend',Basse:'st-res'};
+document.getElementById('dispTable').innerHTML=disp.map(d=>`
+  <tr><td><b>${d[0]}</b></td><td>${d[1]}</td><td>${d[2]}</td>
+  <td><span class="st ${prio[d[3]]}">${d[3]}</span></td>
+  <td><span class="st st-open">Ouvert</span></td>
+  <td><button class="mini-btn">Arbitrer</button> <button class="mini-btn g">Détails</button></td></tr>`).join('');
+
+/* drivers to verify */
+const drv=[
+  ['AB','Aminata Ba','Dakar','Argent','Permis, Assurance','pend'],
+  ['SD','Seydou Diarra','Bamako','Bronze','Carte grise manquante','miss'],
+  ['NG','Nadia Gueye','Thiès','Or','Tous fournis','pend'],
+  ['YT','Yao Touré','Abidjan','Argent','Assurance expirée','miss'],
+];
+document.getElementById('drvTable').innerHTML=drv.map(d=>`
+  <tr><td><div class="tr-name"><div class="av c2" style="width:32px;height:32px;font-size:12px">${d[0]}</div>${d[1]}</div></td>
+  <td>${d[2]}</td><td>${d[3]}</td><td class="${d[5]==='miss'?'':''}">${d[4]}</td>
+  <td><span class="st ${d[5]==='miss'?'st-open':'st-pend'}">${d[5]==='miss'?'Incomplet':'À vérifier'}</span></td>
+  <td><button class="mini-btn">✅ Valider</button> <button class="mini-btn d">Refuser</button></td></tr>`).join('');
+</script>
+</body>
+</html>

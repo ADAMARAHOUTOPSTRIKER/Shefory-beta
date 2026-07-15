@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0E7C66">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>MonChauffeur — prototype</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="styles.css">
+<style>
+/* ---------- device shell ---------- */
+.stage{min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(1200px 600px at 50% -10%,#e9f2ee,#eef0ed);padding:0}
+.phone{position:relative;width:100%;max-width:430px;height:100vh;background:var(--bg);
+  overflow:hidden;display:flex;flex-direction:column}
+@media(min-width:720px){
+  .stage{padding:34px}
+  .phone{height:min(880px,94vh);border-radius:42px;box-shadow:var(--shadow-lg);
+    border:10px solid #10151399;outline:1px solid #0000000d}
+}
+.screen{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;position:relative}
+.screen::-webkit-scrollbar{width:0}
+.view{display:none;animation:fade .25s ease}
+.view.active{display:block}
+#v-splash.active{height:100%}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ---------- generic ---------- */
+.pad{padding:18px 18px 26px}
+.topbar{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:12px;padding:14px 16px}
+.topbar .tt{font-weight:750;font-size:17px}
+.icon-btn{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:18px;background:#EEF1EF;color:var(--ink)}
+.sub{color:var(--muted);font-size:13.5px}
+.h1{font-size:26px;font-weight:800;letter-spacing:-.3px;margin:0}
+.h2{font-size:18px;font-weight:750;margin:0 0 10px}
+.section-t{display:flex;align-items:center;justify-content:space-between;margin:22px 0 12px}
+.section-t h3{margin:0;font-size:15px;font-weight:750}
+.section-t a{font-size:13px;color:var(--primary-600);font-weight:650}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-sm)}
+.divider{height:1px;background:var(--line);margin:14px 0}
+
+/* avatar */
+.av{border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:750;flex:none;
+  background:linear-gradient(135deg,#0E7C66,#12a081);letter-spacing:.5px}
+.av.c1{background:linear-gradient(135deg,#0E7C66,#12a081)}
+.av.c2{background:linear-gradient(135deg,#7A5AF8,#9B7BFF)}
+.av.c3{background:linear-gradient(135deg,#E8823A,#F2A03D)}
+.av.c4{background:linear-gradient(135deg,#2D77C9,#4E9BE6)}
+.av.c5{background:linear-gradient(135deg,#C24C6B,#E0708C)}
+
+/* ---------- splash ---------- */
+#splash{background:linear-gradient(160deg,#0E7C66 0%,#0a5c4d 60%,#083f35 100%);color:#fff;height:100%;
+  display:flex;flex-direction:column;padding:34px 26px 30px}
+#splash .logo{font-size:26px;font-weight:850;letter-spacing:-.4px;display:flex;align-items:center;gap:9px}
+#splash .dot{width:11px;height:11px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 5px #f2a03d33}
+#splash .hero{margin-top:auto}
+#splash h1{font-size:35px;line-height:1.08;font-weight:850;letter-spacing:-.8px;margin:0 0 14px}
+#splash p{color:#ffffffcc;font-size:15.5px;margin:0 0 26px;max-width:30ch}
+.role-btn{width:100%;background:#ffffff;color:var(--ink);border-radius:18px;padding:16px 18px;
+  display:flex;align-items:center;gap:14px;margin-bottom:12px;text-align:left;box-shadow:var(--shadow-md)}
+.role-btn .em{font-size:26px}
+.role-btn b{display:block;font-size:16px}
+.role-btn small{color:var(--muted);font-size:13px}
+.role-btn.alt{background:#ffffff1a;color:#fff;box-shadow:none;border:1px solid #ffffff33}
+.role-btn.alt small{color:#ffffffb3}
+.trust{display:flex;gap:16px;color:#ffffffb3;font-size:12px;margin-top:8px;justify-content:center}
+
+/* ---------- search / home ---------- */
+.searchbar{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);
+  border-radius:14px;padding:12px 14px;box-shadow:var(--shadow-sm)}
+.searchbar input{border:none;outline:none;flex:1;font-size:15px;background:transparent}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 2px;margin:14px 0 4px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;font-size:13px;font-weight:600;padding:8px 13px;border-radius:999px;background:var(--surface);
+  border:1px solid var(--line);color:var(--muted)}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+.promo{background:linear-gradient(120deg,#0E7C66,#0b5e4f);color:#fff;border-radius:var(--r-md);padding:16px 16px;
+  display:flex;gap:12px;align-items:center;overflow:hidden;position:relative}
+.promo .em{font-size:30px}
+.promo b{font-size:15px}
+.promo small{color:#ffffffcc;font-size:12.5px}
+
+/* driver card */
+.dcard{display:flex;gap:13px;padding:14px;position:relative}
+.dcard+.dcard{margin-top:12px}
+.dcard .av{width:56px;height:56px;font-size:19px}
+.dcard .top{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.dcard .nm{font-weight:750;font-size:15.5px}
+.dcard .meta{color:var(--muted);font-size:12.5px;margin-top:3px}
+.dcard .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.dcard .price{margin-top:9px;font-size:13px}
+.dcard .price b{color:var(--ink);font-size:14.5px}
+.rankstripe{position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:4px 0 0 4px}
+.sponsored{position:absolute;top:12px;right:12px;font-size:10.5px;font-weight:700;color:var(--faint)}
+
+/* ---------- profile ---------- */
+.phead{background:linear-gradient(160deg,#0E7C66,#0a5245);color:#fff;padding:20px 18px 22px}
+.phead .av{width:78px;height:78px;font-size:26px;border:3px solid #ffffff44}
+.phead .nm{font-size:21px;font-weight:800;display:flex;align-items:center;gap:8px}
+.statrow{display:flex;background:var(--surface);border-bottom:1px solid var(--line)}
+.statrow .s{flex:1;text-align:center;padding:14px 6px}
+.statrow .s+.s{border-left:1px solid var(--line)}
+.statrow b{display:block;font-size:17px;font-weight:800}
+.statrow small{color:var(--muted);font-size:11.5px}
+.gallery{display:flex;gap:10px;overflow-x:auto;padding:2px 0}
+.gallery::-webkit-scrollbar{display:none}
+.gal{flex:none;width:150px;height:100px;border-radius:14px;display:grid;place-items:center;font-size:34px;
+  background:linear-gradient(135deg,#dfeeea,#cfe4dc);color:#0E7C66}
+.kv{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px}
+.kv span{color:var(--muted)}
+.kv b{font-weight:700}
+.review{padding:13px 0;border-bottom:1px solid var(--line)}
+.review .rh{display:flex;align-items:center;gap:9px}
+.review .av{width:34px;height:34px;font-size:13px}
+.review p{margin:8px 0 0;font-size:13.5px;color:#33413b}
+.sticky-cta{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line);
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;gap:10px;z-index:15}
+
+/* ---------- chat ---------- */
+.convrow{display:flex;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.convrow .av{width:48px;height:48px;font-size:16px}
+.convrow .nm{font-weight:700;font-size:14.5px}
+.convrow .lm{color:var(--muted);font-size:13px;margin-top:2px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.convrow .rt{margin-left:auto;text-align:right;color:var(--faint);font-size:11px}
+.unread{background:var(--primary);color:#fff;border-radius:999px;min-width:19px;height:19px;
+  display:inline-grid;place-items:center;font-size:11px;font-weight:700;padding:0 5px;margin-top:5px}
+.chat-wrap{display:flex;flex-direction:column;height:100%}
+.chat-body{flex:1;overflow-y:auto;padding:16px;background:#eef1ee;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:78%;padding:10px 13px;border-radius:16px;font-size:14px;line-height:1.35;box-shadow:var(--shadow-sm)}
+.msg.them{background:#fff;border-bottom-left-radius:5px;align-self:flex-start}
+.msg.me{background:var(--primary);color:#fff;border-bottom-right-radius:5px;align-self:flex-end}
+.msg .t{display:block;font-size:10.5px;opacity:.6;margin-top:4px;text-align:right}
+.daytag{align-self:center;background:#00000012;color:var(--muted);font-size:11px;padding:3px 10px;border-radius:999px}
+.offer{align-self:center;background:#fff;border:1px dashed var(--primary);border-radius:14px;padding:12px 14px;text-align:center;max-width:80%}
+.offer b{font-size:16px;color:var(--primary-600)}
+.chat-input{display:flex;gap:9px;align-items:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+  background:var(--surface);border-top:1px solid var(--line)}
+.chat-input input{flex:1;border:1px solid var(--line);border-radius:999px;padding:11px 15px;font-size:14px;outline:none}
+.send{width:42px;height:42px;border-radius:50%;background:var(--primary);color:#fff;font-size:18px;flex:none}
+
+/* ---------- driver dashboard / packs ---------- */
+.hcard{background:linear-gradient(150deg,#13201C,#22322c);color:#fff;border-radius:var(--r-md);padding:16px}
+.hcard .row{display:flex;justify-content:space-between;align-items:center}
+.metric{display:flex;gap:10px;margin-top:14px}
+.metric .m{flex:1;background:#ffffff12;border-radius:12px;padding:11px}
+.metric b{font-size:19px;display:block}
+.metric small{color:#ffffffb3;font-size:11px}
+.pack{border:1.5px solid var(--line);border-radius:var(--r-md);padding:16px;position:relative;background:var(--surface)}
+.pack+.pack{margin-top:13px}
+.pack.on{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-tint)}
+.pack.gold{border-color:#e7c46a;background:linear-gradient(180deg,#fffdf6,#fff)}
+.pack .pt{display:flex;align-items:center;justify-content:space-between}
+.pack .nm{font-weight:800;font-size:16px;display:flex;align-items:center;gap:8px}
+.pack .pr{font-weight:800;font-size:18px}
+.pack .pr small{font-weight:600;color:var(--muted);font-size:12px}
+.pack ul{margin:12px 0 14px;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+.pack li{font-size:13.5px;color:#37453f;display:flex;gap:8px}
+.pack li::before{content:"✓";color:var(--primary);font-weight:800}
+.ribbon{position:absolute;top:-10px;right:14px;background:var(--accent);color:#5b430a;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px}
+.progress{height:8px;border-radius:999px;background:#ffffff22;overflow:hidden;margin-top:10px}
+.progress i{display:block;height:100%;background:var(--accent);border-radius:999px}
+
+/* mobile-money modal */
+.sheet-mask{position:absolute;inset:0;background:#0009;z-index:60;display:none;align-items:flex-end}
+.sheet-mask.on{display:flex}
+.sheet{background:var(--surface);width:100%;border-radius:24px 24px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));animation:up .25s ease}
+@keyframes up{from{transform:translateY(100%)}to{transform:none}}
+.grab{width:40px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 14px}
+.mm{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:10px}
+.mm.on{border-color:var(--primary);background:var(--primary-tint)}
+.mm .em{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;font-size:20px;background:#fff;box-shadow:var(--shadow-sm)}
+.mm b{font-size:14.5px}
+.mm small{color:var(--muted);font-size:12px}
+.mm .rd{margin-left:auto;width:20px;height:20px;border-radius:50%;border:2px solid var(--line)}
+.mm.on .rd{border-color:var(--primary);background:radial-gradient(circle,#0E7C66 0 5px,#fff 6px)}
+.ok-anim{text-align:center;padding:26px 10px}
+.ok-circle{width:74px;height:74px;border-radius:50%;background:var(--primary-tint);color:var(--primary);
+  display:grid;place-items:center;font-size:38px;margin:0 auto 14px}
+
+/* ---------- form (driver signup) ---------- */
+.steps{display:flex;gap:6px;padding:14px 16px}
+.steps i{flex:1;height:5px;border-radius:99px;background:var(--line)}
+.steps i.on{background:var(--primary)}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;font-weight:650;margin-bottom:6px}
+.field input,.field textarea,.field select{width:100%;border:1px solid var(--line);border-radius:12px;
+  padding:12px 13px;font-size:14.5px;font-family:inherit;outline:none;background:var(--surface)}
+.field input:focus,.field textarea:focus{border-color:var(--primary)}
+.upload{border:1.5px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--muted);font-size:13px}
+.upload .em{font-size:26px;display:block;margin-bottom:6px}
+.selectgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.selopt{border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center;font-size:13.5px;font-weight:600}
+.selopt.on{border-color:var(--primary);background:var(--primary-tint);color:var(--primary-600)}
+
+/* ---------- bottom nav ---------- */
+.tabbar{display:flex;background:var(--surface);border-top:1px solid var(--line);
+  padding:8px 6px calc(8px + env(safe-area-inset-bottom));z-index:30}
+.tab{flex:1;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--faint);font-size:10.5px;font-weight:600;padding:4px}
+.tab .ic{font-size:20px}
+.tab.on{color:var(--primary)}
+.hidden{display:none!important}
+.toast{position:absolute;left:50%;bottom:80px;transform:translateX(-50%);background:#13201Cf2;color:#fff;
+  padding:11px 16px;border-radius:12px;font-size:13px;z-index:80;opacity:0;transition:.25s;pointer-events:none;white-space:nowrap}
+.toast.on{opacity:1;bottom:92px}
+</style>
+</head>
+<body>
+<div class="stage">
+<div class="phone">
+  <div class="screen" id="screen">
+
+  <!-- ============ SPLASH ============ -->
+  <section class="view active" id="v-splash">
+    <div id="splash">
+      <div class="logo"><span class="dot"></span>MonChauffeur</div>
+      <div class="hero">
+        <h1>Ton chauffeur privé,<br>en toute confiance.</h1>
+        <p>Trouve un chauffeur régulier près de chez toi, ou fais-toi connaître comme chauffeur professionnel.</p>
+        <button class="role-btn" onclick="enterClient()">
+          <span class="em">🔎</span>
+          <span><b>Je cherche un chauffeur</b><small>Gratuit · consulte les profils, discute</small></span>
+        </button>
+        <button class="role-btn alt" onclick="enterDriver()">
+          <span class="em">🚗</span>
+          <span><b>Je suis chauffeur</b><small>Crée ton profil, reçois des clients</small></span>
+        </button>
+        <div class="trust"><span>🔒 Profils vérifiés</span><span>💬 Messagerie directe</span><span>⭐ Avis clients</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CLIENT: SEARCH ============ -->
+  <section class="view" id="v-search">
+    <div class="topbar">
+      <div class="av c1" style="width:38px;height:38px;font-size:14px">MC</div>
+      <div style="flex:1"><div class="tt">Bonjour 👋</div><div class="sub" style="font-size:12px">Dakar, Sénégal · trouve ton chauffeur</div></div>
+      <button class="icon-btn" onclick="toast('Filtres avancés')">⚙️</button>
+    </div>
+    <div class="pad">
+      <div class="searchbar">
+        <span>🔎</span><input placeholder="Zone, ville ou type de trajet…">
+      </div>
+      <div class="chips">
+        <button class="chip on">Tous</button>
+        <button class="chip">⭐ Mieux notés</button>
+        <button class="chip">✅ Vérifiés</button>
+        <button class="chip">🚙 Berline</button>
+        <button class="chip">🚐 Van</button>
+        <button class="chip">💰 Prix ↑</button>
+      </div>
+
+      <div class="promo" style="margin-top:8px">
+        <span class="em">✨</span>
+        <div style="flex:1"><b>Chauffeurs Premium</b><br><small>Sélection vérifiée, réponse rapide garantie</small></div>
+      </div>
+
+      <div class="section-t"><h3>À la une</h3><a>Voir tout</a></div>
+      <div id="driverList"></div>
+    </div>
+  </section>
+
+  <!-- ============ CLIENT: PROFILE ============ -->
+  <section class="view" id="v-profile">
+    <div class="topbar" style="background:transparent;border:none;position:absolute;width:100%">
+      <button class="icon-btn" onclick="go('v-search')" style="background:#ffffffe0">←</button>
+      <div style="flex:1"></div>
+      <button class="icon-btn" onclick="toast('Ajouté aux favoris ❤️')" style="background:#ffffffe0">♡</button>
+    </div>
+    <div id="profileBody"></div>
+    <div class="sticky-cta">
+      <button class="btn btn-ghost" onclick="toast('Appel disponible après contact')">📞</button>
+      <button class="btn btn-primary btn-block" onclick="openChatWith(currentDriver)">💬 Envoyer un message</button>
+    </div>
+  </section>
+
+  <!-- ============ MESSAGES LIST ============ -->
+  <section class="view" id="v-messages">
+    <div class="topbar"><div class="tt" style="flex:1">Messages</div><button class="icon-btn" onclick="toast('Recherche')">🔎</button></div>
+    <div id="convList"></div>
+  </section>
+
+  <!-- ============ CHAT ============ -->
+  <section class="view" id="v-chat">
+    <div class="chat-wrap">
+      <div class="topbar">
+        <button class="icon-btn" onclick="backFromChat()">←</button>
+        <div class="av c1" id="chatAv" style="width:38px;height:38px;font-size:14px"></div>
+        <div style="flex:1"><div class="tt" id="chatName" style="font-size:15px"></div><div class="sub" style="font-size:12px;color:var(--primary)">● en ligne</div></div>
+        <button class="icon-btn" onclick="toast('Signaler / bloquer')">⋯</button>
+      </div>
+      <div class="chat-body" id="chatBody"></div>
+      <div class="chat-input">
+        <button class="icon-btn" style="background:#EEF1EF" onclick="quickOffer()">💰</button>
+        <input id="chatInput" placeholder="Écris un message…" onkeydown="if(event.key==='Enter')sendMsg()">
+        <button class="send" onclick="sendMsg()">➤</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DRIVER: DASHBOARD ============ -->
+  <section class="view" id="v-ddash">
+    <div class="topbar"><div class="tt" style="flex:1">Mon espace chauffeur</div><button class="icon-btn" onclick="toast('Notifications')">🔔</button></div>
+    <div class="pad">
+      <div class="hcard">
+        <div class="row">
+          <div style="display:flex;gap:12px;align-items:center">
+            <div class="av c3" style="width:50px;height:50px;font-size:17px">IN</div>
+            <div><div style="font-weight:800;font-size:16px">Ibrahima Ndiaye</div>
+              <span class="badge badge-gold" style="margin-top:4px">👑 Pack Or</span></div>
+          </div>
+          <button class="icon-btn" style="background:#ffffff1f;color:#fff" onclick="go('v-signup')">✏️</button>
+        </div>
+        <div class="metric">
+          <div class="m"><b>1 284</b><small>Vues du profil (30j)</small></div>
+          <div class="m"><b>#2</b><small>Classement Dakar</small></div>
+          <div class="m"><b>18</b><small>Nouveaux messages</small></div>
+        </div>
+      </div>
+
+      <div class="section-t"><h3>Ta visibilité</h3></div>
+      <div class="card pad" style="padding:16px">
+        <div style="display:flex;justify-content:space-between;font-size:13.5px"><span class="sub">Position dans le classement</span><b>2<sup>e</sup> / 47</b></div>
+        <div class="progress" style="background:#eef1ef;margin-top:10px"><i style="width:92%"></i></div>
+        <p class="sub" style="font-size:12.5px;margin:10px 0 0">Avec le pack <b>Or</b>, ton profil apparaît en tête des résultats et sur la page d'accueil. Passe au niveau supérieur pour rester devant.</p>
+      </div>
+
+      <div class="section-t"><h3>Complète ton profil</h3><a>85%</a></div>
+      <div class="card">
+        <div style="padding:6px 14px">
+          <div class="kv"><span>✅ Photo & bio</span><b style="color:var(--primary)">Fait</b></div>
+          <div class="kv"><span>✅ Documents vérifiés</span><b style="color:var(--primary)">Validé</b></div>
+          <div class="kv" style="border:none"><span>⬜ Ajouter 2 photos véhicule</span><b style="color:var(--accent)">À faire</b></div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-block btn-lg" style="margin-top:18px" onclick="go('v-packs')">⭐ Gérer mon abonnement</button>
+    </div>
+  </section>
+
+  <!-- ============ DRIVER: PACKS ============ -->
+  <section class="view" id="v-packs">
+    <div class="topbar"><button class="icon-btn" onclick="go('v-ddash')">←</button><div class="tt" style="flex:1">Booste ta visibilité</div></div>
+    <div class="pad">
+      <p class="sub" style="margin:0 0 16px">Les abonnements te placent plus haut dans les classements. Paiement mensuel, résiliable à tout moment.</p>
+
+      <div class="pack">
+        <div class="pt"><div class="nm"><span class="badge badge-bronze">Bronze</span></div><div class="pr">3 000 <small>FCFA/mois</small></div></div>
+        <ul><li>Profil visible dans la recherche</li><li>Messagerie illimitée</li><li>Classement standard</li></ul>
+        <button class="btn btn-ghost btn-block" onclick="subscribe('Bronze','3 000')">Choisir Bronze</button>
+      </div>
+
+      <div class="pack">
+        <div class="pt"><div class="nm"><span class="badge badge-silver">Argent</span></div><div class="pr">7 000 <small>FCFA/mois</small></div></div>
+        <ul><li>Tout Bronze, plus :</li><li><b>2× plus de visibilité</b> dans ta zone</li><li>Badge « Argent » sur ton profil</li><li>Statistiques de vues</li></ul>
+        <button class="btn btn-ghost btn-block" onclick="subscribe('Argent','7 000')">Choisir Argent</button>
+      </div>
+
+      <div class="pack gold on">
+        <span class="ribbon">ACTUEL</span>
+        <div class="pt"><div class="nm">👑 <span>Or — Premium</span></div><div class="pr">15 000 <small>FCFA/mois</small></div></div>
+        <ul><li>Tout Argent, plus :</li><li><b>Top du classement</b> garanti</li><li>Mise en avant sur la page d'accueil</li><li>Badge « Or » + label vérifié doré</li><li>Statistiques avancées</li></ul>
+        <button class="btn btn-soft btn-block" onclick="toast('Tu es déjà en Pack Or 👑')">Ton pack actuel</button>
+      </div>
+
+      <p class="sub" style="font-size:12px;text-align:center;margin-top:16px">Paiement sécurisé via Mobile Money · sans engagement</p>
+    </div>
+  </section>
+
+  <!-- ============ DRIVER: SIGNUP / PROFILE EDIT ============ -->
+  <section class="view" id="v-signup">
+    <div class="topbar"><button class="icon-btn" onclick="go(prevView)">←</button><div class="tt" style="flex:1">Créer mon profil chauffeur</div></div>
+    <div class="steps"><i class="on"></i><i class="on"></i><i></i><i></i></div>
+    <div class="pad" style="padding-top:6px">
+      <h2 class="h2">Ton véhicule & tes zones</h2>
+      <div class="field"><label>Type de véhicule</label>
+        <div class="selectgrid">
+          <div class="selopt" onclick="pick(this)">🚗 Berline</div>
+          <div class="selopt on" onclick="pick(this)">🚙 SUV</div>
+          <div class="selopt" onclick="pick(this)">🚐 Van</div>
+          <div class="selopt" onclick="pick(this)">🚕 Autre</div>
+        </div>
+      </div>
+      <div class="field"><label>Modèle & année</label><input value="Toyota Land Cruiser · 2021"></div>
+      <div class="field"><label>Zones desservies</label><input placeholder="Ex. Dakar, Almadies, Aéroport DSS"></div>
+      <div class="field"><label>Tarif indicatif (chauffeur régulier)</label><input value="À partir de 150 000 FCFA / mois"></div>
+      <div class="field"><label>Documents (pour le badge vérifié ✅)</label>
+        <div class="upload"><span class="em">📎</span>Permis, carte grise, assurance<br><small>Ajoute tes justificatifs — validation sous 24h</small></div>
+      </div>
+      <button class="btn btn-primary btn-block btn-lg" onclick="go('v-ddash');toast('Profil enregistré ✅')">Continuer</button>
+    </div>
+  </section>
+
+  </div><!-- /screen -->
+
+  <!-- ============ TAB BARS ============ -->
+  <div class="tabbar hidden" id="tabsClient">
+    <button class="tab on" data-t="v-search" onclick="tabTo('v-search',this)"><span class="ic">🔎</span>Rechercher</button>
+    <button class="tab" data-t="v-messages" onclick="tabTo('v-messages',this)"><span class="ic">💬</span>Messages</button>
+    <button class="tab" onclick="toast('Tes favoris')"><span class="ic">♡</span>Favoris</button>
+    <button class="tab" onclick="go('v-splash');hideTabs()"><span class="ic">👤</span>Compte</button>
+  </div>
+  <div class="tabbar hidden" id="tabsDriver">
+    <button class="tab on" data-t="v-ddash" onclick="tabTo('v-ddash',this)"><span class="ic">📊</span>Espace</button>
+    <button class="tab" data-t="v-messages" onclick="tabTo('v-messages',this)"><span class="ic">💬</span>Messages</button>
+    <button class="tab" data-t="v-packs" onclick="tabTo('v-packs',this)"><span class="ic">⭐</span>Abonnement</button>
+    <button class="tab" onclick="go('v-splash');hideTabs()"><span class="ic">👤</span>Profil</button>
+  </div>
+
+  <!-- mobile money sheet -->
+  <div class="sheet-mask" id="sheet">
+    <div class="sheet" id="sheetInner"></div>
+  </div>
+  <div class="toast" id="toast"></div>
+</div>
+</div>
+
+<script>
+/* ---------------- data ---------------- */
+const drivers = [
+  {id:0,init:"IN",c:"c3",name:"Ibrahima Ndiaye",city:"Dakar · Almadies",rating:4.9,reviews:212,veh:"Berline · Toyota Corolla",pack:"gold",verified:true,resp:98,years:8,price:"180 000",tags:["Aéroport","Longue distance","Nuit"]},
+  {id:1,init:"AT",c:"c5",name:"Aïcha Traoré",city:"Abidjan · Cocody",rating:4.8,reviews:156,veh:"SUV · Hyundai Tucson",pack:"silver",verified:true,resp:95,years:5,price:"160 000",tags:["Femmes","École","Journée"]},
+  {id:2,init:"KM",c:"c4",name:"Kwame Mensah",city:"Douala · Bonapriso",rating:4.7,reviews:98,veh:"Van · Mercedes Vito",pack:"gold",verified:true,resp:92,years:10,price:"220 000",tags:["Groupe","Événement","VIP"]},
+  {id:3,init:"FD",c:"c2",name:"Fatou Diallo",city:"Dakar · Plateau",rating:4.6,reviews:74,veh:"Berline · Kia Cerato",pack:"bronze",verified:true,resp:88,years:3,price:"140 000",tags:["Ville","Ponctuelle"]},
+  {id:4,init:"MK",c:"c1",name:"Moussa Koné",city:"Abidjan · Yopougon",rating:4.4,reviews:41,veh:"Berline · Peugeot 301",pack:null,verified:false,resp:80,years:2,price:"120 000",tags:["Ville"]},
+];
+const stripe={gold:"linear-gradient(180deg,#F6D06B,#D9A32B)",silver:"#9AA6B2",bronze:"#B87A4B",null:"transparent"};
+const packBadge={gold:'<span class="badge badge-gold">👑 Or</span>',silver:'<span class="badge badge-silver">Argent</span>',bronze:'<span class="badge badge-bronze">Bronze</span>'};
+let currentDriver=0, prevView='v-ddash', chatReturn='v-messages';
+
+/* ---------------- navigation ---------------- */
+function go(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('screen').scrollTop=0;
+}
+function tabTo(id,el){go(id);el.parentNode.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');}
+function showTabs(which){document.getElementById('tabsClient').classList.toggle('hidden',which!=='client');
+  document.getElementById('tabsDriver').classList.toggle('hidden',which!=='driver');}
+function hideTabs(){document.getElementById('tabsClient').classList.add('hidden');document.getElementById('tabsDriver').classList.add('hidden');}
+function enterClient(){renderDrivers();go('v-search');showTabs('client');}
+function enterDriver(){go('v-ddash');showTabs('driver');}
+
+/* ---------------- driver list ---------------- */
+function renderDrivers(){
+  const l=document.getElementById('driverList');
+  l.innerHTML=drivers.map(d=>`
+   <div class="card dcard" onclick="openProfile(${d.id})">
+     <div class="rankstripe" style="background:${stripe[d.pack]}"></div>
+     ${d.pack==='gold'?'<span class="sponsored">Sponsorisé ✨</span>':''}
+     <div class="av ${d.c}">${d.init}</div>
+     <div style="flex:1;min-width:0">
+       <div class="top"><span class="nm">${d.name}</span>${d.verified?'<span class="badge badge-verify">✅ Vérifié</span>':''}</div>
+       <div class="meta">📍 ${d.city} · ${d.veh}</div>
+       <div class="meta"><span class="star">★ ${d.rating}</span> (${d.reviews}) · ${d.resp}% de réponse</div>
+       <div class="tags">${d.pack?packBadge[d.pack]:''}${d.tags.slice(0,2).map(t=>`<span class="pill">${t}</span>`).join('')}</div>
+       <div class="price"><b>${d.price} FCFA</b> <span class="sub">/ mois · régulier</span></div>
+     </div>
+   </div>`).join('');
+}
+
+/* ---------------- profile ---------------- */
+function openProfile(id){
+  currentDriver=id;const d=drivers[id];
+  document.getElementById('profileBody').innerHTML=`
+    <div class="phead">
+      <div style="height:26px"></div>
+      <div style="display:flex;gap:14px;align-items:center">
+        <div class="av ${d.c}">${d.init}</div>
+        <div><div class="nm">${d.name} ${d.verified?'<span class="badge badge-verify" style="font-size:11px">✅ Vérifié</span>':''}</div>
+          <div style="opacity:.9;font-size:13px;margin-top:3px">📍 ${d.city}</div>
+          <div style="margin-top:7px">${d.pack?packBadge[d.pack]:'<span class="pill">Standard</span>'}</div></div>
+      </div>
+    </div>
+    <div class="statrow">
+      <div class="s"><b>★ ${d.rating}</b><small>${d.reviews} avis</small></div>
+      <div class="s"><b>${d.years} ans</b><small>expérience</small></div>
+      <div class="s"><b>${d.resp}%</b><small>réponse</small></div>
+    </div>
+    <div class="pad">
+      <div class="gallery">
+        <div class="gal">🚗</div><div class="gal">🪑</div><div class="gal">🧳</div>
+      </div>
+      <div class="section-t"><h3>À propos</h3></div>
+      <p class="sub" style="margin:0">Chauffeur professionnel avec ${d.years} ans d'expérience. ${d.veh}. Ponctuel, discret et à l'écoute. Disponible pour missions régulières (trajets domicile-travail, école, aéroport).</p>
+
+      <div class="section-t"><h3>Détails</h3></div>
+      <div class="kv"><span>Véhicule</span><b>${d.veh}</b></div>
+      <div class="kv"><span>Zones</span><b>${d.city.split('·')[0]}& environs</b></div>
+      <div class="kv"><span>Disponibilité</span><b>Lun–Sam · flexible</b></div>
+      <div class="kv" style="border:none"><span>Tarif régulier</span><b>${d.price} FCFA / mois</b></div>
+
+      <div class="section-t"><h3>Avis clients</h3><a>${d.reviews}</a></div>
+      <div class="review">
+        <div class="rh"><div class="av c4">MS</div><div><b style="font-size:13.5px">Mariam S.</b><div class="star" style="font-size:12px">★★★★★</div></div></div>
+        <p>Toujours à l'heure, conduite souple. Je le recommande pour les trajets école des enfants.</p>
+      </div>
+      <div class="review" style="border:none">
+        <div class="rh"><div class="av c2">OD</div><div><b style="font-size:13.5px">Omar D.</b><div class="star" style="font-size:12px">★★★★★</div></div></div>
+        <p>Très professionnel et flexible sur les horaires. Négociation simple via la messagerie.</p>
+      </div>
+      <div style="height:12px"></div>
+    </div>`;
+  go('v-profile');
+}
+
+/* ---------------- chat ---------------- */
+const convos=[
+  {id:0,unread:2,last:"D'accord pour 160 000, on commence lundi ?",time:"09:41"},
+  {id:1,unread:0,last:"Merci, je vous confirme demain 🙏",time:"Hier"},
+  {id:3,unread:0,last:"Vous : Vous êtes libre le matin ?",time:"Lun"},
+];
+function renderConvos(){
+  document.getElementById('convList').innerHTML=convos.map(c=>{const d=drivers[c.id];return `
+    <div class="convrow" onclick="openChatWith(${c.id})">
+      <div class="av ${d.c}">${d.init}</div>
+      <div style="flex:1;min-width:0"><div class="nm">${d.name}</div><div class="lm">${c.last}</div></div>
+      <div class="rt">${c.time}${c.unread?`<br><span class="unread">${c.unread}</span>`:''}</div>
+    </div>`;}).join('');
+}
+const threads={};
+function seedThread(id){
+  const d=drivers[id];
+  threads[id]=[
+    {k:'day',t:"Aujourd'hui"},
+    {k:'them',t:`Bonjour, merci pour votre message ! Je suis disponible pour un contrat régulier.`,at:'09:32'},
+    {k:'me',t:`Bonjour ${d.name.split(' ')[0]}, je cherche un chauffeur pour les trajets domicile-bureau, du lundi au vendredi.`,at:'09:35'},
+    {k:'them',t:`Parfait, quelle zone et quels horaires ?`,at:'09:36'},
+    {k:'me',t:`Almadies → Plateau, départ 7h30, retour 18h.`,at:'09:38'},
+    {k:'offer',t:`Proposition de tarif`,amount:`${d.price} FCFA / mois`},
+    {k:'them',t:`Je peux faire ${d.price} FCFA/mois carburant inclus. On commence lundi ?`,at:'09:41'},
+  ];
+}
+function openChatWith(id){
+  currentDriver=id;const d=drivers[id];
+  chatReturn = document.getElementById('v-profile').classList.contains('active')?'v-search':'v-messages';
+  if(!threads[id])seedThread(id);
+  document.getElementById('chatName').textContent=d.name;
+  const av=document.getElementById('chatAv');av.textContent=d.init;av.className='av '+d.c;av.style.width='38px';av.style.height='38px';av.style.fontSize='14px';
+  renderChat();go('v-chat');
+}
+function renderChat(){
+  const body=document.getElementById('chatBody');
+  body.innerHTML=threads[currentDriver].map(m=>{
+    if(m.k==='day')return `<div class="daytag">${m.t}</div>`;
+    if(m.k==='offer')return `<div class="offer"><small class="sub">${m.t}</small><br><b>${m.amount}</b></div>`;
+    return `<div class="msg ${m.k}">${m.t}<span class="t">${m.at||''}</span></div>`;
+  }).join('');
+  body.scrollTop=body.scrollHeight;
+}
+function sendMsg(){
+  const i=document.getElementById('chatInput');if(!i.value.trim())return;
+  threads[currentDriver].push({k:'me',t:i.value.trim(),at:'maintenant'});i.value='';renderChat();
+  setTimeout(()=>{threads[currentDriver].push({k:'them',t:'👍 C\'est noté, je reviens vers vous très vite !',at:'maintenant'});renderChat();},900);
+}
+function quickOffer(){threads[currentDriver].push({k:'offer',t:'Nouvelle proposition',amount:'155 000 FCFA / mois'});renderChat();toast('Proposition envoyée 💰');}
+function backFromChat(){go(chatReturn);}
+
+/* ---------------- signup helpers ---------------- */
+function pick(el){el.parentNode.querySelectorAll('.selopt').forEach(o=>o.classList.remove('on'));el.classList.add('on');}
+
+/* ---------------- subscription (simulated mobile money) ---------------- */
+let mmChosen='Wave';
+function subscribe(pack,price){
+  mmChosen='Wave';
+  document.getElementById('sheetInner').innerHTML=`
+    <div class="grab"></div>
+    <h2 class="h2">Abonnement ${pack}</h2>
+    <p class="sub" style="margin:-4px 0 16px">${price} FCFA / mois · Mobile Money</p>
+    ${mmOpt('Wave','🌊','Wave','+221 77 •• •• 12')}
+    ${mmOpt('Orange Money','🟠','Orange Money','+221 78 •• •• 34')}
+    ${mmOpt('MTN MoMo','🟡','MTN MoMo','+225 05 •• •• 56')}
+    ${mmOpt('Moov Money','🔵','Moov Money','+225 01 •• •• 78')}
+    <button class="btn btn-primary btn-block btn-lg" style="margin-top:10px" onclick="payNow('${pack}','${price}')">Payer ${price} FCFA</button>
+    <p class="sub" style="font-size:11.5px;text-align:center;margin:12px 0 0">🔒 Prototype — paiement simulé. L'intégration réelle (Wave / Orange Money / Stripe) viendra ensuite.</p>`;
+  document.getElementById('sheet').classList.add('on');
+}
+function mmOpt(id,em,name,num){return `<div class="mm ${id===mmChosen?'on':''}" onclick="chooseMM('${id}',this)"><div class="em">${em}</div><div><b>${name}</b><br><small>${num}</small></div><div class="rd"></div></div>`;}
+function chooseMM(id,el){mmChosen=id;el.parentNode.querySelectorAll('.mm').forEach(m=>m.classList.remove('on'));el.classList.add('on');}
+function payNow(pack,price){
+  document.getElementById('sheetInner').innerHTML=`
+    <div class="grab"></div>
+    <div class="ok-anim">
+      <div class="ok-circle">✓</div>
+      <h2 class="h2" style="text-align:center">Paiement confirmé</h2>
+      <p class="sub" style="margin-top:-4px">Pack <b>${pack}</b> activé · ${price} FCFA/mois via ${mmChosen}.<br>Ton profil est maintenant boosté dans le classement 🚀</p>
+      <button class="btn btn-primary btn-block btn-lg" style="margin-top:18px" onclick="closeSheet();go('v-ddash')">Voir mon espace</button>
+    </div>`;
+}
+function closeSheet(){document.getElementById('sheet').classList.remove('on');}
+document.getElementById('sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeSheet();});
+
+/* ---------------- toast ---------------- */
+let tmr;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(tmr);tmr=setTimeout(()=>t.classList.remove('on'),1800);}
+
+/* init */
+renderDrivers();renderConvos();
+</script>
+</body>
+</html>
