@@ -420,9 +420,10 @@
 </div>
 </div>
 
+<script src="js/supabase.js"></script>
 <script>
-/* ---------------- data ---------------- */
-const drivers = [
+/* ---------------- data (fallback local si Supabase est injoignable) ---------------- */
+let drivers = [
   {id:0,init:"IN",c:"c3",name:"Ibrahima Ndiaye",city:"Dakar · Almadies",rating:4.9,reviews:212,veh:"Berline · Toyota Corolla",pack:"gold",verified:true,resp:98,years:8,price:"180 000",tags:["Aéroport","Longue distance","Nuit"]},
   {id:1,init:"AT",c:"c5",name:"Aïcha Traoré",city:"Abidjan · Cocody",rating:4.8,reviews:156,veh:"SUV · Hyundai Tucson",pack:"silver",verified:true,resp:95,years:5,price:"160 000",tags:["Femmes","École","Journée"]},
   {id:2,init:"KM",c:"c4",name:"Kwame Mensah",city:"Douala · Bonapriso",rating:4.7,reviews:98,veh:"Van · Mercedes Vito",pack:"gold",verified:true,resp:92,years:10,price:"220 000",tags:["Groupe","Événement","VIP"]},
@@ -598,8 +599,33 @@ document.getElementById('sheet').addEventListener('click',e=>{if(e.target.id==='
 /* ---------------- toast ---------------- */
 let tmr;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(tmr);tmr=setTimeout(()=>t.classList.remove('on'),1800);}
 
+/* ---------------- chargement des chauffeurs depuis Supabase ---------------- */
+function mapDriver(d,i){
+  const colors=['c1','c2','c3','c4','c5'];
+  const initials=(d.display_name||'?').trim().split(/\s+/).map(w=>w[0]||'').slice(0,2).join('').toUpperCase();
+  const cap=s=>s?s.charAt(0).toUpperCase()+s.slice(1):'';
+  return {
+    id:i, dbId:d.id, init:initials, c:colors[i%colors.length],
+    name:d.display_name,
+    city:(d.city||'')+(Array.isArray(d.zones)&&d.zones[0]?' · '+d.zones[0]:''),
+    rating:Number(d.rating||0), reviews:d.reviews_count||0,
+    veh:[cap(d.vehicle_type),d.vehicle_model].filter(Boolean).join(' · '),
+    pack:d.pack_tier||null, verified:d.verification_status==='verified',
+    resp:d.response_rate||0, years:d.years_experience||0,
+    price:Number(d.price_month_xof||0).toLocaleString('fr-FR'),
+    tags:Array.isArray(d.tags)?d.tags:[]
+  };
+}
+async function loadDrivers(){
+  try{
+    const rows=await sbRest('drivers?select=*&is_active=eq.true&order=rank_score.desc');
+    if(Array.isArray(rows)&&rows.length){ drivers=rows.map(mapDriver); }
+  }catch(e){ console.warn('Supabase injoignable — données de démo locales utilisées.', e.message); }
+  renderDrivers();
+}
+
 /* init */
-renderDrivers();renderConvos();
+loadDrivers();renderConvos();
 </script>
 </body>
 </html>
