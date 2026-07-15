@@ -222,15 +222,42 @@
       <div class="hero">
         <h1>Ton chauffeur privé,<br>en toute confiance.</h1>
         <p>Trouve un chauffeur régulier près de chez toi, ou fais-toi connaître comme chauffeur professionnel.</p>
-        <button class="role-btn" onclick="enterClient()">
+        <button class="role-btn" onclick="startAuth('client')">
           <span class="em">🔎</span>
           <span><b>Je cherche un chauffeur</b><small>Gratuit · consulte les profils, discute</small></span>
         </button>
-        <button class="role-btn alt" onclick="enterDriver()">
+        <button class="role-btn alt" onclick="startAuth('driver')">
           <span class="em">🚗</span>
           <span><b>Je suis chauffeur</b><small>Crée ton profil, reçois des clients</small></span>
         </button>
         <div class="trust"><span>🔒 Profils vérifiés</span><span>💬 Messagerie directe</span><span>⭐ Avis clients</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ AUTH ============ -->
+  <section class="view" id="v-auth">
+    <div class="topbar"><button class="icon-btn" onclick="go('v-splash');hideTabs()">←</button><div class="tt" id="authTitle" style="flex:1">Connexion</div></div>
+    <div class="pad">
+      <div id="authRoleBanner" class="promo" style="margin:2px 0 18px"><span class="em">🔎</span><div style="flex:1"><b id="authRoleTitle">Espace client</b><br><small id="authRoleSub">Gratuit · consulte et contacte les chauffeurs</small></div></div>
+
+      <div class="field" id="fldName" style="display:none"><label>Nom complet</label><input id="auName" placeholder="Ton nom"></div>
+      <div class="field"><label>Email</label><input id="auEmail" type="email" placeholder="toi@exemple.com" autocomplete="email"></div>
+      <div class="field" id="fldPhone" style="display:none"><label>Téléphone (optionnel)</label><input id="auPhone" placeholder="+221 …"></div>
+      <div class="field"><label>Mot de passe</label><input id="auPass" type="password" placeholder="••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doAuth()"></div>
+
+      <div id="authError" class="sub" style="color:var(--danger);min-height:18px;margin:-4px 0 8px;font-size:13px"></div>
+      <button class="btn btn-primary btn-block btn-lg" id="authSubmit" onclick="doAuth()">Se connecter</button>
+      <p class="sub" style="text-align:center;margin:14px 0 0">
+        <span id="authToggleTxt">Pas encore de compte ?</span>
+        <a onclick="toggleAuthMode()" style="color:var(--primary-600);font-weight:700" id="authToggleLink">Inscris-toi</a>
+      </p>
+
+      <div class="divider"></div>
+      <p class="sub" style="text-align:center;font-size:12px;margin:0 0 10px">Tester avec un compte de démo (mdp : shefory123)</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+        <button class="pill" onclick="demoLogin('ibrahima@demo.shefory.app')">🚗 Chauffeur (Or)</button>
+        <button class="pill" onclick="demoLogin('client@demo.shefory.app')">🔎 Client</button>
       </div>
     </div>
   </section>
@@ -311,7 +338,7 @@
         <div class="row">
           <div style="display:flex;gap:12px;align-items:center">
             <div class="av c3" style="width:50px;height:50px;font-size:17px">IN</div>
-            <div><div style="font-weight:800;font-size:16px">Ibrahima Ndiaye</div>
+            <div><div id="ddName" style="font-weight:800;font-size:16px">Ibrahima Ndiaye</div>
               <span class="badge badge-gold" style="margin-top:4px">👑 Pack Or</span></div>
           </div>
           <button class="icon-btn" style="background:#ffffff1f;color:#fff" onclick="go('v-signup')">✏️</button>
@@ -403,13 +430,13 @@
     <button class="tab on" data-t="v-search" onclick="tabTo('v-search',this)"><span class="ic">🔎</span>Rechercher</button>
     <button class="tab" data-t="v-messages" onclick="tabTo('v-messages',this)"><span class="ic">💬</span>Messages</button>
     <button class="tab" onclick="toast('Tes favoris')"><span class="ic">♡</span>Favoris</button>
-    <button class="tab" onclick="go('v-splash');hideTabs()"><span class="ic">👤</span>Compte</button>
+    <button class="tab" onclick="doLogout()"><span class="ic">👤</span>Compte</button>
   </div>
   <div class="tabbar hidden" id="tabsDriver">
     <button class="tab on" data-t="v-ddash" onclick="tabTo('v-ddash',this)"><span class="ic">📊</span>Espace</button>
     <button class="tab" data-t="v-messages" onclick="tabTo('v-messages',this)"><span class="ic">💬</span>Messages</button>
     <button class="tab" data-t="v-packs" onclick="tabTo('v-packs',this)"><span class="ic">⭐</span>Abonnement</button>
-    <button class="tab" onclick="go('v-splash');hideTabs()"><span class="ic">👤</span>Profil</button>
+    <button class="tab" onclick="doLogout()"><span class="ic">👤</span>Profil</button>
   </div>
 
   <!-- mobile money sheet -->
@@ -624,8 +651,76 @@ async function loadDrivers(){
   renderDrivers();
 }
 
+/* ---------------- auth flow ---------------- */
+let authMode='login', authRole='client', currentUser=null;
+function startAuth(role){
+  if(SB.isLoggedIn()){ afterLogin(); return; }
+  authRole=role; authMode='login'; clearAuthErr(); renderAuth(); go('v-auth');
+}
+function renderAuth(){
+  const isSignup=authMode==='signup', driver=authRole==='driver';
+  document.getElementById('authTitle').textContent=isSignup?'Inscription':'Connexion';
+  document.getElementById('authRoleTitle').textContent=driver?'Espace chauffeur':'Espace client';
+  document.getElementById('authRoleSub').textContent=driver?'Crée ton profil, reçois des clients':'Gratuit · consulte et contacte les chauffeurs';
+  document.querySelector('#authRoleBanner .em').textContent=driver?'🚗':'🔎';
+  document.getElementById('fldName').style.display=isSignup?'':'none';
+  document.getElementById('fldPhone').style.display=isSignup?'':'none';
+  document.getElementById('authSubmit').textContent=isSignup?'Créer mon compte':'Se connecter';
+  document.getElementById('authToggleTxt').textContent=isSignup?'Déjà un compte ?':'Pas encore de compte ?';
+  document.getElementById('authToggleLink').textContent=isSignup?'Connecte-toi':'Inscris-toi';
+}
+function toggleAuthMode(){ authMode=authMode==='login'?'signup':'login'; clearAuthErr(); renderAuth(); }
+function clearAuthErr(){ document.getElementById('authError').textContent=''; }
+function authErr(m){ document.getElementById('authError').textContent=m; }
+function friendlyAuthError(m){
+  if(/Invalid login/i.test(m)) return 'Email ou mot de passe incorrect.';
+  if(/already registered|already been registered|User already/i.test(m)) return 'Un compte existe déjà avec cet email.';
+  if(/Password should be|at least/i.test(m)) return 'Mot de passe trop court (6 caractères min).';
+  if(/Failed to fetch|NetworkError|injoignable/i.test(m)) return 'Connexion au serveur impossible. Réessaie.';
+  return m;
+}
+async function doAuth(){
+  const email=document.getElementById('auEmail').value.trim();
+  const pass=document.getElementById('auPass').value;
+  const name=document.getElementById('auName').value.trim();
+  const phone=document.getElementById('auPhone').value.trim();
+  if(!email||!pass){ authErr('Email et mot de passe requis.'); return; }
+  const btn=document.getElementById('authSubmit'); const lbl=btn.textContent; btn.disabled=true; btn.textContent='…';
+  try{
+    if(authMode==='signup'){
+      if(!name){ authErr('Ton nom est requis.'); return; }
+      await SB.signUp({email,password:pass,role:authRole,full_name:name,phone});
+    } else {
+      await SB.signIn(email,pass);
+    }
+    await afterLogin();
+  }catch(e){ authErr(friendlyAuthError(e.message)); }
+  finally{ btn.disabled=false; btn.textContent=lbl; }
+}
+async function demoLogin(email){
+  clearAuthErr();
+  try{ await SB.signIn(email,'shefory123'); await afterLogin(); }
+  catch(e){ authErr(friendlyAuthError(e.message)); }
+}
+async function afterLogin(){
+  currentUser=SB.user();
+  if(SB.role()==='driver'){ await fillDriverHeader(); enterDriver(); }
+  else { enterClient(); }
+}
+function doLogout(){ SB.signOut(); currentUser=null; hideTabs(); go('v-splash'); toast('Déconnecté'); }
+async function fillDriverHeader(){
+  const u=SB.user(); if(!u) return;
+  const fallback=(u.user_metadata&&u.user_metadata.full_name)||u.email;
+  const el=document.getElementById('ddName'); if(el) el.textContent=fallback;
+  try{
+    const rows=await sbRest('drivers?select=display_name&id=eq.'+u.id,{auth:true});
+    if(rows&&rows[0]&&el) el.textContent=rows[0].display_name||fallback;
+  }catch(_){}
+}
+
 /* init */
 loadDrivers();renderConvos();
+if(SB.isLoggedIn()){ currentUser=SB.user(); }  // session restaurée; l'utilisateur reprend depuis le splash
 </script>
 </body>
 </html>

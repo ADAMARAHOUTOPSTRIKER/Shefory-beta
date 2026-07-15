@@ -81,7 +81,8 @@ Advisors sécurité : les seuls WARN restants concernent `is_admin` / `is_conver
 ## État du câblage front
 
 - ✅ **Recherche / annuaire** (`index.html`) : lit les chauffeurs en direct via l'API REST, triés par `rank_score`. Repli automatique sur des données de démo locales si l'API est injoignable.
-- ⏳ **À câbler ensuite** : inscription/connexion (Auth), messagerie temps réel (Realtime), abonnements (checkout Mobile Money), admin (`admin.html`).
+- ✅ **Auth** (`js/supabase.js` + écran `v-auth`) : inscription & connexion email/mot de passe reliées à Supabase Auth, session persistée en `localStorage`, déconnexion, boutons de connexion démo. Le rôle (client/driver) est transmis à l'inscription et pilote le routage. Comptes auto-confirmés (trigger `auto_confirm_new_user`) pour un parcours signup → connexion immédiat.
+- ⏳ **À câbler ensuite** : messagerie temps réel (Realtime), abonnements (checkout Mobile Money), admin (`admin.html`), création/édition de la fiche chauffeur reliée à `drivers`.
 
 ## Migrations appliquées
 

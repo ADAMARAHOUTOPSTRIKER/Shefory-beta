@@ -1,20 +1,30 @@
 /* ============================================================
- * Shefory — configuration & client Supabase (léger, sans dépendance)
+ * Shefory — configuration, client REST & Auth Supabase (sans dépendance)
  * ============================================================ */
 window.SHEFORY = {
   url: "https://pmtqyiriapzlpqcxuleo.supabase.co",
-  // Clé PUBLIQUE (publishable) — sûre à exposer côté navigateur, la RLS protège les données.
+  // Clé PUBLIQUE (publishable) — sûre côté navigateur, la RLS protège les données.
   key: "sb_publishable_MZmFVPmsSBpwcTZCmLXJug_zBf5yl7b",
 };
 
-/* Petit helper REST (PostgREST). Renvoie le JSON, lève une erreur sinon. */
+/* ---------------- session (localStorage) ---------------- */
+const SESSION_KEY = "shefory_session";
+function saveSession(s) { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); }
+function clearSession() { localStorage.removeItem(SESSION_KEY); }
+function getSession() {
+  try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch { return null; }
+}
+
+/* ---------------- helper REST (PostgREST) ---------------- */
 window.sbRest = async function (path, opts = {}) {
-  const { method = "GET", headers = {}, body, token } = opts;
+  const { method = "GET", headers = {}, body, auth = false } = opts;
+  const sess = getSession();
+  const token = auth && sess ? sess.access_token : SHEFORY.key;
   const res = await fetch(SHEFORY.url + "/rest/v1/" + path, {
     method,
     headers: {
       apikey: SHEFORY.key,
-      Authorization: "Bearer " + (token || SHEFORY.key),
+      Authorization: "Bearer " + token,
       "Content-Type": "application/json",
       ...headers,
     },
@@ -22,4 +32,52 @@ window.sbRest = async function (path, opts = {}) {
   });
   if (!res.ok) throw new Error("REST " + res.status + " — " + (await res.text()));
   return res.status === 204 ? null : res.json();
+};
+
+/* ---------------- Auth (GoTrue) ---------------- */
+async function authFetch(path, body, method = "POST") {
+  const res = await fetch(SHEFORY.url + "/auth/v1/" + path, {
+    method,
+    headers: { apikey: SHEFORY.key, "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.msg || data.error_description || data.error || ("Auth " + res.status));
+  return data;
+}
+
+window.SB = {
+  session: getSession,
+  user: () => (getSession() || {}).user || null,
+  role: () => {
+    const u = (getSession() || {}).user;
+    return u && u.user_metadata ? u.user_metadata.role || "client" : null;
+  },
+  isLoggedIn: () => !!getSession(),
+
+  async signIn(email, password) {
+    const d = await authFetch("token?grant_type=password", { email, password });
+    saveSession(d);
+    return d;
+  },
+
+  async signUp({ email, password, role, full_name, phone }) {
+    // 1) création du compte (métadonnées -> rôle/nom via trigger)
+    await authFetch("signup", { email, password, data: { role, full_name, phone } });
+    // 2) le compte est auto-confirmé -> on ouvre directement une session
+    return this.signIn(email, password);
+  },
+
+  async signOut() {
+    const sess = getSession();
+    if (sess) {
+      try {
+        await fetch(SHEFORY.url + "/auth/v1/logout", {
+          method: "POST",
+          headers: { apikey: SHEFORY.key, Authorization: "Bearer " + sess.access_token },
+        });
+      } catch (_) {}
+    }
+    clearSession();
+  },
 };
