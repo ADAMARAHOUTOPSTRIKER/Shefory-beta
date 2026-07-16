@@ -339,7 +339,7 @@
           <div style="display:flex;gap:12px;align-items:center">
             <div class="av c3" style="width:50px;height:50px;font-size:17px">IN</div>
             <div><div id="ddName" style="font-weight:800;font-size:16px">Ibrahima Ndiaye</div>
-              <span class="badge badge-gold" style="margin-top:4px">👑 Pack Or</span></div>
+              <span class="badge badge-gold" id="ddPack" style="margin-top:4px">👑 Pack Or</span></div>
           </div>
           <button class="icon-btn" style="background:#ffffff1f;color:#fff" onclick="go('v-signup')">✏️</button>
         </div>
@@ -366,7 +366,7 @@
         </div>
       </div>
 
-      <button class="btn btn-primary btn-block btn-lg" style="margin-top:18px" onclick="go('v-packs')">⭐ Gérer mon abonnement</button>
+      <button class="btn btn-primary btn-block btn-lg" style="margin-top:18px" onclick="openPacks()">⭐ Gérer mon abonnement</button>
     </div>
   </section>
 
@@ -376,24 +376,7 @@
     <div class="pad">
       <p class="sub" style="margin:0 0 16px">Les abonnements te placent plus haut dans les classements. Paiement mensuel, résiliable à tout moment.</p>
 
-      <div class="pack">
-        <div class="pt"><div class="nm"><span class="badge badge-bronze">Bronze</span></div><div class="pr">3 000 <small>FCFA/mois</small></div></div>
-        <ul><li>Profil visible dans la recherche</li><li>Messagerie illimitée</li><li>Classement standard</li></ul>
-        <button class="btn btn-ghost btn-block" onclick="subscribe('Bronze','3 000')">Choisir Bronze</button>
-      </div>
-
-      <div class="pack">
-        <div class="pt"><div class="nm"><span class="badge badge-silver">Argent</span></div><div class="pr">7 000 <small>FCFA/mois</small></div></div>
-        <ul><li>Tout Bronze, plus :</li><li><b>2× plus de visibilité</b> dans ta zone</li><li>Badge « Argent » sur ton profil</li><li>Statistiques de vues</li></ul>
-        <button class="btn btn-ghost btn-block" onclick="subscribe('Argent','7 000')">Choisir Argent</button>
-      </div>
-
-      <div class="pack gold on">
-        <span class="ribbon">ACTUEL</span>
-        <div class="pt"><div class="nm">👑 <span>Or — Premium</span></div><div class="pr">15 000 <small>FCFA/mois</small></div></div>
-        <ul><li>Tout Argent, plus :</li><li><b>Top du classement</b> garanti</li><li>Mise en avant sur la page d'accueil</li><li>Badge « Or » + label vérifié doré</li><li>Statistiques avancées</li></ul>
-        <button class="btn btn-soft btn-block" onclick="toast('Tu es déjà en Pack Or 👑')">Ton pack actuel</button>
-      </div>
+      <div id="packList"></div>
 
       <p class="sub" style="font-size:12px;text-align:center;margin-top:16px">Paiement sécurisé via Mobile Money · sans engagement</p>
     </div>
@@ -450,6 +433,7 @@
 <script src="js/vendor/supabase.js"></script>
 <script src="js/supabase.js"></script>
 <script src="js/realtime.js"></script>
+<script src="js/billing.js"></script>
 <script>
 /* ---------------- data (fallback local si Supabase est injoignable) ---------------- */
 let drivers = [
@@ -474,7 +458,10 @@ function showTabs(which){document.getElementById('tabsClient').classList.toggle(
   document.getElementById('tabsDriver').classList.toggle('hidden',which!=='driver');}
 function hideTabs(){document.getElementById('tabsClient').classList.add('hidden');document.getElementById('tabsDriver').classList.add('hidden');}
 function enterClient(){renderDrivers();go('v-search');showTabs('client');}
-function enterDriver(){go('v-ddash');showTabs('driver');}
+async function enterDriver(){
+  go('v-ddash'); showTabs('driver');
+  if(isLive()){ try{ await ensureDriverRow(); }catch(e){ console.warn(e); } refreshDriverDash(); renderPacks(); }
+}
 
 /* ---------------- driver list ---------------- */
 function renderDrivers(){
@@ -667,36 +654,91 @@ function backFromChat(){
 /* ---------------- signup helpers ---------------- */
 function pick(el){el.parentNode.querySelectorAll('.selopt').forEach(o=>o.classList.remove('on'));el.classList.add('on');}
 
-/* ---------------- subscription (simulated mobile money) ---------------- */
-let mmChosen='Wave';
-function subscribe(pack,price){
-  mmChosen='Wave';
+/* ---------------- packs & abonnement ---------------- */
+const PACK_FALLBACK=[
+  {tier:'bronze',name:'Bronze',price_xof:3000,features:['Profil visible dans la recherche','Messagerie illimitée','Classement standard']},
+  {tier:'silver',name:'Argent',price_xof:7000,features:['Tout Bronze','2× plus de visibilité dans ta zone','Badge « Argent »','Statistiques de vues']},
+  {tier:'gold',name:'Or — Premium',price_xof:15000,features:['Tout Argent','Top du classement garanti','Mise en avant page d’accueil','Badge « Or » + vérifié doré','Statistiques avancées']},
+];
+const TIER_LABEL={bronze:'Bronze',silver:'Argent',gold:'Or'};
+const TIER_BADGE={bronze:'badge-bronze',silver:'badge-silver',gold:'badge-gold'};
+const MM_KEY={'Wave':'wave','Orange Money':'orange_money','MTN MoMo':'mtn_momo','Moov Money':'moov_money'};
+let packsCache=[], myTier=null, mmChosen='Wave';
+
+function packByTier(t){ return packsCache.find(p=>p.tier===t)||PACK_FALLBACK.find(p=>p.tier===t); }
+function openPacks(){ renderPacks(); go('v-packs'); }
+async function renderPacks(){
+  let packs=PACK_FALLBACK;
+  if(isLive()){
+    try{ const rows=await loadPacks(); if(rows&&rows.length) packs=rows; }catch(e){ console.warn('packs',e); }
+    try{ const sub=await getMySubscription(); myTier=sub?sub.tier:null; }catch(e){ myTier=null; }
+  }
+  packsCache=packs;
+  document.getElementById('packList').innerHTML=packs.map(p=>{
+    const cur=myTier===p.tier;
+    const feats=(Array.isArray(p.features)?p.features:[]).map(f=>`<li>${escapeHtml(f)}</li>`).join('');
+    return `<div class="pack ${p.tier==='gold'?'gold':''} ${cur?'on':''}">
+      ${cur?'<span class="ribbon">ACTUEL</span>':''}
+      <div class="pt"><div class="nm">${p.tier==='gold'?'👑 ':''}<span class="badge ${TIER_BADGE[p.tier]}">${TIER_LABEL[p.tier]}</span></div>
+        <div class="pr">${Number(p.price_xof).toLocaleString('fr-FR')} <small>FCFA/mois</small></div></div>
+      <ul>${feats}</ul>
+      ${cur
+        ? `<button class="btn btn-soft btn-block" onclick="toast('C\\'est ton pack actuel 👍')">Ton pack actuel</button>`
+        : `<button class="btn ${p.tier==='gold'?'btn-primary':'btn-ghost'} btn-block" onclick="subscribe('${p.tier}')">Choisir ${TIER_LABEL[p.tier]}</button>`}
+    </div>`;
+  }).join('');
+}
+
+function subscribe(tier){
+  const p=packByTier(tier); const price=Number(p.price_xof).toLocaleString('fr-FR'); mmChosen='Wave';
   document.getElementById('sheetInner').innerHTML=`
     <div class="grab"></div>
-    <h2 class="h2">Abonnement ${pack}</h2>
+    <h2 class="h2">Abonnement ${TIER_LABEL[tier]}</h2>
     <p class="sub" style="margin:-4px 0 16px">${price} FCFA / mois · Mobile Money</p>
     ${mmOpt('Wave','🌊','Wave','+221 77 •• •• 12')}
     ${mmOpt('Orange Money','🟠','Orange Money','+221 78 •• •• 34')}
     ${mmOpt('MTN MoMo','🟡','MTN MoMo','+225 05 •• •• 56')}
     ${mmOpt('Moov Money','🔵','Moov Money','+225 01 •• •• 78')}
-    <button class="btn btn-primary btn-block btn-lg" style="margin-top:10px" onclick="payNow('${pack}','${price}')">Payer ${price} FCFA</button>
-    <p class="sub" style="font-size:11.5px;text-align:center;margin:12px 0 0">🔒 Prototype — paiement simulé. L'intégration réelle (Wave / Orange Money / Stripe) viendra ensuite.</p>`;
+    <button class="btn btn-primary btn-block btn-lg" style="margin-top:10px" onclick="payNow('${tier}')">Payer ${price} FCFA</button>
+    <p class="sub" style="font-size:11.5px;text-align:center;margin:12px 0 0">🔒 Paiement simulé (beta) — l'abonnement est réellement enregistré. L'intégration Mobile Money réelle viendra ensuite.</p>`;
   document.getElementById('sheet').classList.add('on');
 }
 function mmOpt(id,em,name,num){return `<div class="mm ${id===mmChosen?'on':''}" onclick="chooseMM('${id}',this)"><div class="em">${em}</div><div><b>${name}</b><br><small>${num}</small></div><div class="rd"></div></div>`;}
 function chooseMM(id,el){mmChosen=id;el.parentNode.querySelectorAll('.mm').forEach(m=>m.classList.remove('on'));el.classList.add('on');}
-function payNow(pack,price){
+
+async function payNow(tier){
+  const p=packByTier(tier); const price=Number(p.price_xof).toLocaleString('fr-FR');
+  if(isLive()){
+    document.getElementById('sheetInner').innerHTML=`<div class="grab"></div><div class="ok-anim"><div class="ok-circle">⏳</div><h2 class="h2" style="text-align:center">Paiement en cours…</h2><p class="sub" style="margin-top:-4px">Confirmation via ${mmChosen}</p></div>`;
+    try{ await subscribeToPack(tier, MM_KEY[mmChosen]||'wave'); }
+    catch(e){ console.warn(e);
+      document.getElementById('sheetInner').innerHTML=`<div class="grab"></div><div class="ok-anim"><div class="ok-circle" style="background:#fbe3e3;color:#b63636">✕</div><h2 class="h2" style="text-align:center">Paiement échoué</h2><p class="sub" style="margin-top:-4px">${escapeHtml(e.message||'Réessaie.')}</p><button class="btn btn-ghost btn-block" style="margin-top:14px" onclick="closeSheet()">Fermer</button></div>`;
+      return; }
+  }
   document.getElementById('sheetInner').innerHTML=`
     <div class="grab"></div>
     <div class="ok-anim">
       <div class="ok-circle">✓</div>
       <h2 class="h2" style="text-align:center">Paiement confirmé</h2>
-      <p class="sub" style="margin-top:-4px">Pack <b>${pack}</b> activé · ${price} FCFA/mois via ${mmChosen}.<br>Ton profil est maintenant boosté dans le classement 🚀</p>
-      <button class="btn btn-primary btn-block btn-lg" style="margin-top:18px" onclick="closeSheet();go('v-ddash')">Voir mon espace</button>
+      <p class="sub" style="margin-top:-4px">Pack <b>${TIER_LABEL[tier]}</b> activé · ${price} FCFA/mois via ${mmChosen}.<br>Ton profil est boosté dans le classement 🚀</p>
+      <button class="btn btn-primary btn-block btn-lg" style="margin-top:18px" onclick="afterSubscribe()">Voir mon espace</button>
     </div>`;
 }
+function afterSubscribe(){ closeSheet(); refreshDriverDash(); renderPacks(); if(typeof loadDrivers==='function') loadDrivers(); go('v-ddash'); }
 function closeSheet(){document.getElementById('sheet').classList.remove('on');}
 document.getElementById('sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeSheet();});
+
+async function refreshDriverDash(){
+  if(!isLive()) return;
+  try{
+    const d=await getMyDriver(); if(!d) return;
+    const nm=document.getElementById('ddName'); if(nm) nm.textContent=d.display_name;
+    const el=document.getElementById('ddPack');
+    if(el){ const t=d.pack_tier;
+      el.className='badge '+(TIER_BADGE[t]||'badge-flat'); el.style.marginTop='4px';
+      el.textContent = t==='gold'?'👑 Pack Or':t==='silver'?'Pack Argent':t==='bronze'?'Pack Bronze':'Gratuit'; }
+  }catch(e){ console.warn('dash',e); }
+}
 
 /* ---------------- toast ---------------- */
 let tmr;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(tmr);tmr=setTimeout(()=>t.classList.remove('on'),1800);}
@@ -780,7 +822,7 @@ async function demoLogin(email){
 async function afterLogin(){
   currentUser=SB.user();
   if(window.initRealtimeSession) await initRealtimeSession();
-  if(SB.role()==='driver'){ await fillDriverHeader(); enterDriver(); }
+  if(SB.role()==='driver'){ await enterDriver(); }
   else { enterClient(); }
 }
 function doLogout(){ SB.signOut(); if(window.teardownRealtime) teardownRealtime(); currentUser=null; liveConv=null; hideTabs(); go('v-splash'); toast('Déconnecté'); }
