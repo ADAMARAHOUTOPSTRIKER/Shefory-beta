@@ -15,6 +15,9 @@ Backend de la marketplace **Shefory** (chauffeurs ↔ clients), sur **Supabase**
 ## Rôles & authentification
 
 - Auth Supabase (email + mot de passe). À l'inscription, un **profil** est créé automatiquement (trigger `handle_new_user`).
+- **Confirmation d'email obligatoire** depuis la migration `0012` (l'auto-confirmation beta a été retirée). Le lien de confirmation redirige vers l'app (`redirect_to`).
+- **Mot de passe oublié** : email de récupération (`/auth/v1/recover`) → l'app détecte le lien (`#type=recovery`) et affiche l'écran « Nouveau mot de passe ».
+- ⚠️ **Configuration requise (dashboard Supabase)** : Authentication → URL Configuration → **Site URL** = `https://adamarahoutopstriker.github.io/Shefory-beta/` (+ même URL dans Redirect URLs), sinon les liens des emails pointent vers localhost. Pour un volume d'emails sérieux, brancher un SMTP personnalisé (ex. Resend) — le SMTP intégré de Supabase est très limité (quelques emails/heure).
 - Rôle porté par `profiles.role` : **`client`** (défaut) · **`driver`** · **`admin`**.
   Le rôle se passe dans les métadonnées d'inscription : `{ "role": "driver", "full_name": "…" }`.
 
@@ -87,7 +90,8 @@ Advisors sécurité : les seuls WARN restants concernent `is_admin` / `is_conver
 - ✅ **Abonnements** (`js/billing.js` + écran `v-packs`) : packs chargés en direct depuis `subscription_packs`, checkout (carte CMI / paiement mobile marocain) **simulé mais réellement enregistré** — chaque souscription crée `subscriptions` + `payments`, ce qui déclenche `sync_driver_pack` et **fait monter le chauffeur dans le classement**. La fiche chauffeur est créée automatiquement (`ensureDriverRow`) à la première connexion driver. Le tableau de bord reflète le pack actif. En prod, le write de `payments` passera par une Edge Function/webhook de l'agrégateur (service role) — la policy `payments_owner_insert` est temporaire (beta).
 - ✅ **Admin** (`admin.html` + `js/admin.js`) : **portail réservé aux admins** (connexion + contrôle du rôle), puis données réelles — KPIs (chauffeurs actifs, abonnements, MRR du mois, litiges ouverts), graphe des revenus mensuels, répartition par pack, activité récente, table des paiements, litiges, et **vérification des chauffeurs** avec actions live (✅ valider / refuser un chauffeur, résoudre un litige). Mode « Voir la démo » pour un aperçu hors-ligne.
 - ✅ **Fiche chauffeur** (`js/profile.js` + écran `v-signup`) : édition complète reliée à `drivers` (nom, ville, véhicule, modèle/année, zones, bio, tarif), **upload de photos** de véhicule (bucket public `driver-photos`, aperçu + suppression) et **upload de documents** (bucket privé `driver-docs`, permis/carte grise/assurance/identité) qui repasse la fiche en « à vérifier » pour l'admin. Toutes les écritures respectent la RLS et le dossier Storage `{user_id}/…`.
-- ⏳ **À câbler ensuite** : passage du paiement simulé au vrai paiement marocain (Edge Function + CMI ou agrégateur type PayZone/YouCan Pay).
+- ✅ **Prêt pour vrais utilisateurs** : confirmation d'email obligatoire, réinitialisation de mot de passe, pages légales (`cgu.html`, `confidentialite.html` — loi 09-08, CNDP) liées depuis le splash et l'écran d'auth.
+- ⏳ **À câbler ensuite** : passage du paiement simulé au vrai paiement marocain (Edge Function + CMI ou agrégateur type PayZone/YouCan Pay) ; adresse de contact réelle à substituer à `contact@shefory.app` dans les pages légales.
 
 ## Migrations appliquées
 
@@ -95,6 +99,6 @@ Advisors sécurité : les seuls WARN restants concernent `is_admin` / `is_conver
 `0003_subscriptions_packs_payments` · `0004_messaging_realtime` ·
 `0005_reviews_disputes_audit` · `0006_harden_functions` · `0007_seed_demo` ·
 `0008_auto_confirm_signups` · `0009_payments_owner_insert_beta` ·
-`0010_add_morocco_payment_methods` · `0011_morocco_localization`
+`0010_add_morocco_payment_methods` · `0011_morocco_localization` · `0012_require_email_confirmation`
 
 (Historique conservé côté Supabase ; récupérable via `supabase db pull`.)

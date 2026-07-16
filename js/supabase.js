@@ -62,10 +62,31 @@ window.SB = {
   },
 
   async signUp({ email, password, role, full_name, phone }) {
-    // 1) création du compte (métadonnées -> rôle/nom via trigger)
-    await authFetch("signup", { email, password, data: { role, full_name, phone } });
-    // 2) le compte est auto-confirmé -> on ouvre directement une session
-    return this.signIn(email, password);
+    // création du compte (métadonnées -> rôle/nom via trigger).
+    // redirect_to : où renvoie le lien de confirmation reçu par e-mail.
+    const redirect = encodeURIComponent(location.origin + location.pathname);
+    const d = await authFetch("signup?redirect_to=" + redirect, { email, password, data: { role, full_name, phone } });
+    if (d && d.access_token) { saveSession(d); return { session: true }; }
+    // pas de session : l'e-mail doit être confirmé d'abord
+    return { needsConfirmation: true };
+  },
+
+  /* envoie l'e-mail « mot de passe oublié » */
+  async resetPassword(email) {
+    const redirect = encodeURIComponent(location.origin + location.pathname);
+    return authFetch("recover?redirect_to=" + redirect, { email });
+  },
+
+  /* définit le nouveau mot de passe avec le token du lien de récupération */
+  async updatePasswordWithToken(token, password) {
+    const res = await fetch(SHEFORY.url + "/auth/v1/user", {
+      method: "PUT",
+      headers: { apikey: SHEFORY.key, Authorization: "Bearer " + token, "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.msg || data.error_description || ("Auth " + res.status));
+    return data;
   },
 
   async signOut() {

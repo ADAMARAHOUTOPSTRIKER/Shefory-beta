@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shefory — Politique de confidentialité</title>
+<link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="styles.css">
+<style>
+.legal{max-width:720px;margin:0 auto;padding:28px 20px 60px}
+.legal h1{font-size:24px;font-weight:800;margin:18px 0 4px}
+.legal .date{color:var(--muted);font-size:13px;margin-bottom:26px}
+.legal h2{font-size:16.5px;font-weight:750;margin:26px 0 8px}
+.legal p,.legal li{font-size:14.5px;line-height:1.65;color:#33413b}
+.legal ul{padding-left:20px}
+.legal table{width:100%;border-collapse:collapse;font-size:13.5px;margin:10px 0}
+.legal th,.legal td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+.legal th{background:#f4f6f4;font-weight:700}
+.back{display:inline-flex;align-items:center;gap:8px;font-weight:650;color:var(--primary-600);margin-bottom:6px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:850;font-size:19px;margin-top:8px}
+.brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+</style>
+</head>
+<body>
+<div class="legal">
+  <a class="back" href="index.html">← Retour à l'application</a>
+  <div class="brand"><span class="dot"></span>Shefory</div>
+  <h1>Politique de confidentialité</h1>
+  <p class="date">Version beta · Dernière mise à jour : juillet 2026</p>
+
+  <p>Shefory traite vos données personnelles conformément à la <b>loi marocaine n° 09-08</b> relative à la protection des personnes physiques à l'égard du traitement des données à caractère personnel, et à ses textes d'application. Les formalités auprès de la <b>CNDP</b> (Commission Nationale de contrôle de la protection des Données à caractère Personnel) seront accomplies avant la sortie de la version définitive du service.</p>
+
+  <h2>1. Données que nous collectons</h2>
+  <table>
+    <tr><th>Catégorie</th><th>Exemples</th><th>Qui est concerné</th></tr>
+    <tr><td>Compte</td><td>Nom, e-mail, téléphone (optionnel), mot de passe (chiffré)</td><td>Tous</td></tr>
+    <tr><td>Profil public chauffeur</td><td>Nom affiché, ville, zones, véhicule, tarif, bio, photos du véhicule, note et avis</td><td>Chauffeurs</td></tr>
+    <tr><td>Documents de vérification</td><td>Permis, carte grise, assurance, pièce d'identité</td><td>Chauffeurs (volontaire)</td></tr>
+    <tr><td>Messagerie</td><td>Contenu des conversations et propositions de tarif</td><td>Tous</td></tr>
+    <tr><td>Abonnement</td><td>Pack choisi, historique de paiement (montant, moyen, statut)</td><td>Chauffeurs</td></tr>
+    <tr><td>Technique</td><td>Session de connexion, favoris (stockés sur votre appareil)</td><td>Tous</td></tr>
+  </table>
+
+  <h2>2. Finalités</h2>
+  <ul>
+    <li>Fournir le service : mise en relation, messagerie, classement des profils.</li>
+    <li>Vérifier l'identité et les justificatifs des chauffeurs (badge « Vérifié »).</li>
+    <li>Gérer les abonnements et paiements des chauffeurs.</li>
+    <li>Traiter les signalements et litiges, prévenir la fraude et les abus.</li>
+    <li>Améliorer le service (statistiques d'usage agrégées).</li>
+  </ul>
+
+  <h2>3. Qui voit quoi</h2>
+  <ul>
+    <li>Le <b>profil chauffeur</b> (nom affiché, ville, véhicule, tarif, note, photos) est <b>public</b> : c'est l'objet même du service.</li>
+    <li>Les <b>documents de vérification</b> sont <b>privés</b> : visibles uniquement par le chauffeur concerné et l'équipe d'administration.</li>
+    <li>Les <b>conversations</b> ne sont visibles que par leurs deux participants, et par l'administration en cas de signalement ou de litige.</li>
+    <li>Les données de compte et de paiement ne sont jamais vendues ni cédées à des tiers à des fins commerciales.</li>
+  </ul>
+
+  <h2>4. Hébergement et sous-traitants</h2>
+  <p>Les données sont hébergées chez <b>Supabase</b> (infrastructure AWS, région <b>eu-west-3, Paris</b>). L'accès aux données est restreint par des règles de sécurité au niveau de la base (Row Level Security). Lors de l'activation des paiements réels, un prestataire de paiement marocain agréé traitera les données bancaires — Shefory ne stocke aucun numéro de carte.</p>
+
+  <h2>5. Durées de conservation</h2>
+  <ul>
+    <li>Compte et profil : tant que le compte est actif, puis suppression ou anonymisation dans un délai raisonnable après clôture.</li>
+    <li>Documents de vérification : le temps de la vérification et de la relation contractuelle.</li>
+    <li>Données de paiement : durées légales comptables en vigueur au Maroc.</li>
+    <li>Journal des actions sensibles (audit) : durée nécessaire à la sécurité du service.</li>
+  </ul>
+
+  <h2>6. Vos droits (loi 09-08)</h2>
+  <p>Vous disposez d'un droit <b>d'accès</b>, de <b>rectification</b> et <b>d'opposition</b> sur vos données, ainsi que du droit de demander la <b>suppression de votre compte</b>. Pour l'exercer : <b>contact@shefory.app</b> ou via la messagerie de l'application. Vous pouvez également saisir la CNDP (<a href="https://www.cndp.ma" rel="noopener">www.cndp.ma</a>).</p>
+
+  <h2>7. Cookies et stockage local</h2>
+  <p>Shefory n'utilise pas de cookies publicitaires. L'application stocke sur votre appareil (localStorage) : votre session de connexion et votre liste de favoris. Ces données restent sur votre appareil et peuvent être effacées en vous déconnectant ou en vidant les données du navigateur.</p>
+
+  <h2>8. Sécurité</h2>
+  <p>Mots de passe chiffrés (bcrypt), échanges en HTTPS, cloisonnement des données par utilisateur (RLS), documents sensibles dans un espace de stockage privé, journal d'audit des actions d'administration.</p>
+
+  <h2>9. Mineurs</h2>
+  <p>Le service est réservé aux personnes majeures (18 ans et plus).</p>
+
+  <h2>10. Contact</h2>
+  <p>Responsable du traitement : Shefory (statut en cours de constitution — beta). Contact : <b>contact@shefory.app</b>.</p>
+</div>
+</body>
+</html>

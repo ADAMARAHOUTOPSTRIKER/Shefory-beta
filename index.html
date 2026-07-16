@@ -231,6 +231,9 @@
           <span><b>Je suis chauffeur</b><small>Crée ton profil, reçois des clients</small></span>
         </button>
         <div class="trust"><span>🔒 Profils vérifiés</span><span>💬 Messagerie directe</span><span>⭐ Avis clients</span></div>
+        <p style="text-align:center;margin:14px 0 0;font-size:11px;color:#ffffff80">
+          <a href="cgu.html" style="text-decoration:underline">CGU</a> · <a href="confidentialite.html" style="text-decoration:underline">Confidentialité</a>
+        </p>
       </div>
     </div>
   </section>
@@ -252,6 +255,13 @@
         <span id="authToggleTxt">Pas encore de compte ?</span>
         <a onclick="toggleAuthMode()" style="color:var(--primary-600);font-weight:700" id="authToggleLink">Inscris-toi</a>
       </p>
+      <p class="sub" id="fpLink" style="text-align:center;margin:10px 0 0;font-size:13px">
+        <a onclick="forgotPass()" style="color:var(--muted);text-decoration:underline">Mot de passe oublié ?</a>
+      </p>
+      <p class="sub" style="text-align:center;margin:14px 0 0;font-size:11.5px">
+        En continuant tu acceptes les <a href="cgu.html" style="text-decoration:underline">CGU</a>
+        et la <a href="confidentialite.html" style="text-decoration:underline">Politique de confidentialité</a>.
+      </p>
 
       <div class="divider"></div>
       <p class="sub" style="text-align:center;font-size:12px;margin:0 0 10px">Tester avec un compte de démo (mdp : shefory123)</p>
@@ -259,6 +269,18 @@
         <button class="pill" onclick="demoLogin('youssef@demo.shefory.app')">🚗 Chauffeur (Or)</button>
         <button class="pill" onclick="demoLogin('client@demo.shefory.app')">🔎 Client</button>
       </div>
+    </div>
+  </section>
+
+  <!-- ============ RESET PASSWORD ============ -->
+  <section class="view" id="v-reset">
+    <div class="topbar"><div class="tt" style="flex:1">Nouveau mot de passe</div></div>
+    <div class="pad">
+      <p class="sub" style="margin:2px 0 16px">Choisis ton nouveau mot de passe (6 caractères minimum).</p>
+      <div class="field"><label>Nouveau mot de passe</label><input id="rsPass" type="password" placeholder="••••••"></div>
+      <div class="field"><label>Confirme le mot de passe</label><input id="rsPass2" type="password" placeholder="••••••" onkeydown="if(event.key==='Enter')doReset()"></div>
+      <div id="rsErr" class="sub" style="color:var(--danger);min-height:18px;margin:-4px 0 8px;font-size:13px"></div>
+      <button class="btn btn-primary btn-block btn-lg" id="rsBtn" onclick="doReset()">Changer le mot de passe</button>
     </div>
   </section>
 
@@ -864,11 +886,15 @@ function renderAuth(){
   document.getElementById('authSubmit').textContent=isSignup?'Créer mon compte':'Se connecter';
   document.getElementById('authToggleTxt').textContent=isSignup?'Déjà un compte ?':'Pas encore de compte ?';
   document.getElementById('authToggleLink').textContent=isSignup?'Connecte-toi':'Inscris-toi';
+  const fp=document.getElementById('fpLink'); if(fp) fp.style.display=isSignup?'none':'';
 }
 function toggleAuthMode(){ authMode=authMode==='login'?'signup':'login'; clearAuthErr(); renderAuth(); }
-function clearAuthErr(){ document.getElementById('authError').textContent=''; }
-function authErr(m){ document.getElementById('authError').textContent=m; }
+function clearAuthErr(){ const e=document.getElementById('authError'); e.style.color='var(--danger)'; e.textContent=''; }
+function authErr(m){ const e=document.getElementById('authError'); e.style.color='var(--danger)'; e.textContent=m; }
+function authOk(m){ const e=document.getElementById('authError'); e.style.color='var(--primary-600)'; e.textContent=m; }
 function friendlyAuthError(m){
+  if(/Email not confirmed/i.test(m)) return 'Confirme d\'abord ton email (vérifie ta boîte mail et tes spams).';
+  if(/rate limit|too many/i.test(m)) return 'Trop de tentatives — réessaie dans quelques minutes.';
   if(/Invalid login/i.test(m)) return 'Email ou mot de passe incorrect.';
   if(/already registered|already been registered|User already/i.test(m)) return 'Un compte existe déjà avec cet email.';
   if(/Password should be|at least/i.test(m)) return 'Mot de passe trop court (6 caractères min).';
@@ -885,13 +911,40 @@ async function doAuth(){
   try{
     if(authMode==='signup'){
       if(!name){ authErr('Ton nom est requis.'); return; }
-      await SB.signUp({email,password:pass,role:authRole,full_name:name,phone});
+      const res=await SB.signUp({email,password:pass,role:authRole,full_name:name,phone});
+      if(res&&res.needsConfirmation){
+        authMode='login'; renderAuth();
+        authOk('Compte créé ✅ Un email de confirmation t\'a été envoyé — clique sur le lien puis connecte-toi.');
+        return;
+      }
     } else {
       await SB.signIn(email,pass);
     }
     await afterLogin();
   }catch(e){ authErr(friendlyAuthError(e.message)); }
   finally{ btn.disabled=false; btn.textContent=lbl; }
+}
+async function forgotPass(){
+  let email=document.getElementById('auEmail').value.trim();
+  if(!email){ email=(prompt('Ton adresse email ?')||'').trim(); if(!email) return; }
+  try{ await SB.resetPassword(email); authOk('Email de réinitialisation envoyé à '+email+' 📧 (vérifie tes spams).'); }
+  catch(e){ authErr(friendlyAuthError(e.message)); }
+}
+let recoveryToken=null;
+function rsErr(m){ document.getElementById('rsErr').textContent=m||''; }
+async function doReset(){
+  const p1=document.getElementById('rsPass').value, p2=document.getElementById('rsPass2').value;
+  if(p1.length<6){ rsErr('6 caractères minimum.'); return; }
+  if(p1!==p2){ rsErr('Les deux mots de passe ne correspondent pas.'); return; }
+  const btn=document.getElementById('rsBtn'); btn.disabled=true; btn.textContent='…';
+  try{
+    await SB.updatePasswordWithToken(recoveryToken,p1);
+    recoveryToken=null; history.replaceState(null,'',location.pathname);
+    toast('Mot de passe changé ✅');
+    authMode='login'; authRole='client'; renderAuth(); go('v-auth');
+    authOk('Mot de passe changé — connecte-toi avec le nouveau.');
+  }catch(e){ rsErr(friendlyAuthError(e.message||'Lien expiré — redemande un email.')); }
+  finally{ btn.disabled=false; btn.textContent='Changer le mot de passe'; }
 }
 async function demoLogin(email){
   clearAuthErr();
@@ -916,6 +969,13 @@ async function fillDriverHeader(){
 }
 
 /* init */
+(function(){
+  const h=new URLSearchParams(location.hash.replace(/^#/,''));
+  if(h.get('type')==='recovery'&&h.get('access_token')){
+    recoveryToken=h.get('access_token');
+    go('v-reset');
+  }
+})();
 loadDrivers();renderConvos();
 if(SB.isLoggedIn()){ currentUser=SB.user(); if(window.initRealtimeSession) initRealtimeSession(); }  // session restaurée
 </script>
