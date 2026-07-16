@@ -341,7 +341,7 @@
             <div><div id="ddName" style="font-weight:800;font-size:16px">Ibrahima Ndiaye</div>
               <span class="badge badge-gold" id="ddPack" style="margin-top:4px">👑 Pack Or</span></div>
           </div>
-          <button class="icon-btn" style="background:#ffffff1f;color:#fff" onclick="go('v-signup')">✏️</button>
+          <button class="icon-btn" style="background:#ffffff1f;color:#fff" onclick="openProfileEditor()">✏️</button>
         </div>
         <div class="metric">
           <div class="m"><b>1 284</b><small>Vues du profil (30j)</small></div>
@@ -384,25 +384,40 @@
 
   <!-- ============ DRIVER: SIGNUP / PROFILE EDIT ============ -->
   <section class="view" id="v-signup">
-    <div class="topbar"><button class="icon-btn" onclick="go(prevView)">←</button><div class="tt" style="flex:1">Créer mon profil chauffeur</div></div>
-    <div class="steps"><i class="on"></i><i class="on"></i><i></i><i></i></div>
-    <div class="pad" style="padding-top:6px">
-      <h2 class="h2">Ton véhicule & tes zones</h2>
+    <div class="topbar"><button class="icon-btn" onclick="go('v-ddash')">←</button><div class="tt" style="flex:1">Ma fiche chauffeur</div></div>
+    <div class="pad" style="padding-top:14px">
+      <h2 class="h2">Profil & véhicule</h2>
+      <div class="field"><label>Nom affiché</label><input id="pfName" placeholder="Ton nom public"></div>
+      <div class="field"><label>Ville</label><input id="pfCity" placeholder="Ex. Dakar"></div>
       <div class="field"><label>Type de véhicule</label>
-        <div class="selectgrid">
-          <div class="selopt" onclick="pick(this)">🚗 Berline</div>
-          <div class="selopt on" onclick="pick(this)">🚙 SUV</div>
-          <div class="selopt" onclick="pick(this)">🚐 Van</div>
-          <div class="selopt" onclick="pick(this)">🚕 Autre</div>
+        <div class="selectgrid" id="pfVehType">
+          <div class="selopt" data-v="berline" onclick="pick(this)">🚗 Berline</div>
+          <div class="selopt" data-v="suv" onclick="pick(this)">🚙 SUV</div>
+          <div class="selopt" data-v="van" onclick="pick(this)">🚐 Van</div>
+          <div class="selopt" data-v="autre" onclick="pick(this)">🚕 Autre</div>
         </div>
       </div>
-      <div class="field"><label>Modèle & année</label><input value="Toyota Land Cruiser · 2021"></div>
-      <div class="field"><label>Zones desservies</label><input placeholder="Ex. Dakar, Almadies, Aéroport DSS"></div>
-      <div class="field"><label>Tarif indicatif (chauffeur régulier)</label><input value="À partir de 150 000 FCFA / mois"></div>
-      <div class="field"><label>Documents (pour le badge vérifié ✅)</label>
-        <div class="upload"><span class="em">📎</span>Permis, carte grise, assurance<br><small>Ajoute tes justificatifs — validation sous 24h</small></div>
+      <div class="field"><label>Modèle</label><input id="pfModel" placeholder="Ex. Toyota Corolla"></div>
+      <div class="field"><label>Année</label><input id="pfYear" type="number" inputmode="numeric" placeholder="2021"></div>
+      <div class="field"><label>Zones desservies <span class="sub" style="font-weight:400">(séparées par des virgules)</span></label><input id="pfZones" placeholder="Almadies, Plateau, Aéroport DSS"></div>
+      <div class="field"><label>Bio</label><textarea id="pfBio" rows="3" placeholder="Présente-toi en quelques mots…"></textarea></div>
+      <div class="field"><label>Tarif régulier (FCFA / mois)</label><input id="pfPrice" type="number" inputmode="numeric" placeholder="150000"></div>
+
+      <div class="section-t"><h3>Photos du véhicule</h3></div>
+      <div id="pfPhotos" class="gallery" style="margin-bottom:10px"></div>
+      <label class="upload" for="pfPhotoInput" style="display:block;cursor:pointer"><span class="em">📷</span>Ajouter une photo<br><small>Visible sur ton profil public</small></label>
+      <input id="pfPhotoInput" type="file" accept="image/*" style="display:none" onchange="onPickPhoto(this)">
+
+      <div class="section-t"><h3>Documents <span class="sub" style="font-weight:400">(badge vérifié ✅)</span></h3></div>
+      <div id="pfDocs" style="margin-bottom:8px"></div>
+      <div class="field" style="margin-bottom:10px"><label>Type de document</label>
+        <select id="pfDocType"><option value="permis">Permis</option><option value="carte_grise">Carte grise</option><option value="assurance">Assurance</option><option value="identite">Pièce d'identité</option></select>
       </div>
-      <button class="btn btn-primary btn-block btn-lg" onclick="go('v-ddash');toast('Profil enregistré ✅')">Continuer</button>
+      <label class="upload" for="pfDocInput" style="display:block;cursor:pointer"><span class="em">📎</span>Ajouter un justificatif<br><small>Privé — visible par toi et l'admin · validation sous 24h</small></label>
+      <input id="pfDocInput" type="file" accept="image/*,application/pdf" style="display:none" onchange="onPickDoc(this)">
+
+      <div id="pfMsg" class="sub" style="min-height:18px;margin:12px 0 0;text-align:center"></div>
+      <button class="btn btn-primary btn-block btn-lg" style="margin-top:6px" onclick="saveDriverForm()">Enregistrer</button>
     </div>
   </section>
 
@@ -434,6 +449,7 @@
 <script src="js/supabase.js"></script>
 <script src="js/realtime.js"></script>
 <script src="js/billing.js"></script>
+<script src="js/profile.js"></script>
 <script>
 /* ---------------- data (fallback local si Supabase est injoignable) ---------------- */
 let drivers = [
