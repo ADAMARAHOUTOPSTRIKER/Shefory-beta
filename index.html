@@ -447,7 +447,9 @@
 </div>
 </div>
 
+<script src="js/vendor/supabase.js"></script>
 <script src="js/supabase.js"></script>
+<script src="js/realtime.js"></script>
 <script>
 /* ---------------- data (fallback local si Supabase est injoignable) ---------------- */
 let drivers = [
@@ -543,14 +545,11 @@ const convos=[
   {id:1,unread:0,last:"Merci, je vous confirme demain 🙏",time:"Hier"},
   {id:3,unread:0,last:"Vous : Vous êtes libre le matin ?",time:"Lun"},
 ];
-function renderConvos(){
-  document.getElementById('convList').innerHTML=convos.map(c=>{const d=drivers[c.id];return `
-    <div class="convrow" onclick="openChatWith(${c.id})">
-      <div class="av ${d.c}">${d.init}</div>
-      <div style="flex:1;min-width:0"><div class="nm">${d.name}</div><div class="lm">${c.last}</div></div>
-      <div class="rt">${c.time}${c.unread?`<br><span class="unread">${c.unread}</span>`:''}</div>
-    </div>`;}).join('');
-}
+/* ---- état messagerie live ---- */
+let liveConv=null, liveChannel=null, liveMsgs=[], liveConvIndex={};
+function escapeHtml(s){return (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function isLive(){ return !!(window.sbClient && SB.isLoggedIn()); }
+
 const threads={};
 function seedThread(id){
   const d=drivers[id];
@@ -564,30 +563,106 @@ function seedThread(id){
     {k:'them',t:`Je peux faire ${d.price} FCFA/mois carburant inclus. On commence lundi ?`,at:'09:41'},
   ];
 }
-function openChatWith(id){
-  currentDriver=id;const d=drivers[id];
+
+/* ---- liste des conversations (live ou démo) ---- */
+function renderConvos(){ if(isLive()) renderConvosLive(); else renderConvosDemo(); }
+async function renderConvosLive(){
+  try{
+    const convs=await loadConversationsDB(); liveConvIndex={};
+    const driverSide=SB.role()==='driver'; const list=document.getElementById('convList');
+    if(!convs.length){ list.innerHTML='<div class="pad sub" style="text-align:center;padding-top:44px">Aucune conversation pour l\'instant.<br>Contacte un chauffeur depuis son profil.</div>'; return; }
+    list.innerHTML=convs.map(c=>{
+      liveConvIndex[c.id]=c;
+      const name=driverSide?(c.client_name||'Client'):(c.driver_name||'Chauffeur');
+      const ini=(name||'?').trim().split(/\s+/).map(w=>w[0]||'').slice(0,2).join('').toUpperCase();
+      const unread=driverSide?c.driver_unread:c.client_unread;
+      const t=c.last_message_at?new Date(c.last_message_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}):'';
+      return `<div class="convrow" onclick="openLiveChatById('${c.id}')">
+        <div class="av c1">${ini}</div>
+        <div style="flex:1;min-width:0"><div class="nm">${escapeHtml(name)}</div><div class="lm">${escapeHtml(c.last_message||'Nouvelle conversation')}</div></div>
+        <div class="rt">${t}${unread?`<br><span class="unread">${unread}</span>`:''}</div></div>`;
+    }).join('');
+  }catch(e){ console.warn('convos live',e); renderConvosDemo(); }
+}
+function renderConvosDemo(){
+  document.getElementById('convList').innerHTML=convos.map(c=>{const d=drivers[c.id]||drivers[0];return `
+    <div class="convrow" onclick="openChatWith(${c.id})">
+      <div class="av ${d.c}">${d.init}</div>
+      <div style="flex:1;min-width:0"><div class="nm">${d.name}</div><div class="lm">${c.last}</div></div>
+      <div class="rt">${c.time}${c.unread?`<br><span class="unread">${c.unread}</span>`:''}</div>
+    </div>`;}).join('');
+}
+
+/* ---- ouvrir un chat ---- */
+async function openChatWith(id){
+  const d=drivers[id];
   chatReturn = document.getElementById('v-profile').classList.contains('active')?'v-search':'v-messages';
-  if(!threads[id])seedThread(id);
+  if(isLive() && d && d.dbId){
+    try{ const conv=await ensureConversation({dbId:d.dbId,name:d.name,avatar:null}); await openLiveChat(conv); return; }
+    catch(e){ console.warn(e); toast('Messagerie indisponible'); }
+  }
+  currentDriver=id; if(!threads[id])seedThread(id);
   document.getElementById('chatName').textContent=d.name;
   const av=document.getElementById('chatAv');av.textContent=d.init;av.className='av '+d.c;av.style.width='38px';av.style.height='38px';av.style.fontSize='14px';
-  renderChat();go('v-chat');
+  liveConv=null; renderChat(); go('v-chat');
+}
+function openLiveChatById(cid){ const c=liveConvIndex[cid]; if(c){ chatReturn='v-messages'; openLiveChat(c);} }
+async function openLiveChat(conv){
+  liveConv=conv; const driverSide=SB.role()==='driver';
+  const name=driverSide?(conv.client_name||'Client'):(conv.driver_name||'Chauffeur');
+  const ini=(name||'?').trim().split(/\s+/).map(w=>w[0]||'').slice(0,2).join('').toUpperCase();
+  document.getElementById('chatName').textContent=name;
+  const av=document.getElementById('chatAv');av.textContent=ini;av.className='av c1';av.style.width='38px';av.style.height='38px';av.style.fontSize='14px';
+  liveMsgs=await loadMessages(conv.id); renderLiveChat(); go('v-chat');
+  if(liveChannel){ try{ sbClient.removeChannel(liveChannel);}catch(_){}}
+  liveChannel=subscribeMessages(conv.id,m=>{ if(!liveMsgs.some(x=>x.id===m.id)){ liveMsgs.push(m); renderLiveChat(); }});
+  markConversationRead(conv);
+}
+function renderLiveChat(){
+  const me=SB.user(); const body=document.getElementById('chatBody');
+  body.innerHTML=liveMsgs.map(m=>{
+    const mine=me&&m.sender_id===me.id;
+    const t=m.created_at?new Date(m.created_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'';
+    if(m.kind==='offer')return `<div class="offer"><small class="sub">Proposition de tarif</small><br><b>${Number(m.amount_xof||0).toLocaleString('fr-FR')} FCFA / mois</b></div>`;
+    return `<div class="msg ${mine?'me':'them'}">${escapeHtml(m.body)}<span class="t">${t}</span></div>`;
+  }).join('');
+  body.scrollTop=body.scrollHeight;
 }
 function renderChat(){
   const body=document.getElementById('chatBody');
-  body.innerHTML=threads[currentDriver].map(m=>{
+  body.innerHTML=(threads[currentDriver]||[]).map(m=>{
     if(m.k==='day')return `<div class="daytag">${m.t}</div>`;
     if(m.k==='offer')return `<div class="offer"><small class="sub">${m.t}</small><br><b>${m.amount}</b></div>`;
     return `<div class="msg ${m.k}">${m.t}<span class="t">${m.at||''}</span></div>`;
   }).join('');
   body.scrollTop=body.scrollHeight;
 }
-function sendMsg(){
-  const i=document.getElementById('chatInput');if(!i.value.trim())return;
-  threads[currentDriver].push({k:'me',t:i.value.trim(),at:'maintenant'});i.value='';renderChat();
+async function sendMsg(){
+  const i=document.getElementById('chatInput'); const val=i.value.trim(); if(!val)return;
+  if(liveConv){
+    i.value='';
+    try{ const row=await sendMessageDB(liveConv.id,{kind:'text',body:val}); if(!liveMsgs.some(x=>x.id===row.id)){ liveMsgs.push(row); renderLiveChat(); } }
+    catch(e){ toast('Envoi impossible'); i.value=val; }
+    return;
+  }
+  threads[currentDriver].push({k:'me',t:val,at:'maintenant'});i.value='';renderChat();
   setTimeout(()=>{threads[currentDriver].push({k:'them',t:'👍 C\'est noté, je reviens vers vous très vite !',at:'maintenant'});renderChat();},900);
 }
-function quickOffer(){threads[currentDriver].push({k:'offer',t:'Nouvelle proposition',amount:'155 000 FCFA / mois'});renderChat();toast('Proposition envoyée 💰');}
-function backFromChat(){go(chatReturn);}
+async function quickOffer(){
+  if(liveConv){
+    const raw=prompt('Montant proposé (FCFA / mois)','150000'); if(raw===null)return;
+    const amount=parseInt(String(raw).replace(/\D/g,''),10); if(!amount){ toast('Montant invalide'); return; }
+    try{ const row=await sendMessageDB(liveConv.id,{kind:'offer',amount}); if(!liveMsgs.some(x=>x.id===row.id)){ liveMsgs.push(row); renderLiveChat(); } toast('Proposition envoyée 💰'); }
+    catch(e){ toast('Envoi impossible'); }
+    return;
+  }
+  threads[currentDriver].push({k:'offer',t:'Nouvelle proposition',amount:'155 000 FCFA / mois'});renderChat();toast('Proposition envoyée 💰');
+}
+function backFromChat(){
+  if(liveChannel){ try{ sbClient.removeChannel(liveChannel);}catch(_){} liveChannel=null; }
+  const wasLive=!!liveConv; liveConv=null; go(chatReturn);
+  if(chatReturn==='v-messages' && wasLive) renderConvos();
+}
 
 /* ---------------- signup helpers ---------------- */
 function pick(el){el.parentNode.querySelectorAll('.selopt').forEach(o=>o.classList.remove('on'));el.classList.add('on');}
@@ -704,10 +779,11 @@ async function demoLogin(email){
 }
 async function afterLogin(){
   currentUser=SB.user();
+  if(window.initRealtimeSession) await initRealtimeSession();
   if(SB.role()==='driver'){ await fillDriverHeader(); enterDriver(); }
   else { enterClient(); }
 }
-function doLogout(){ SB.signOut(); currentUser=null; hideTabs(); go('v-splash'); toast('Déconnecté'); }
+function doLogout(){ SB.signOut(); if(window.teardownRealtime) teardownRealtime(); currentUser=null; liveConv=null; hideTabs(); go('v-splash'); toast('Déconnecté'); }
 async function fillDriverHeader(){
   const u=SB.user(); if(!u) return;
   const fallback=(u.user_metadata&&u.user_metadata.full_name)||u.email;
@@ -720,7 +796,7 @@ async function fillDriverHeader(){
 
 /* init */
 loadDrivers();renderConvos();
-if(SB.isLoggedIn()){ currentUser=SB.user(); }  // session restaurée; l'utilisateur reprend depuis le splash
+if(SB.isLoggedIn()){ currentUser=SB.user(); if(window.initRealtimeSession) initRealtimeSession(); }  // session restaurée
 </script>
 </body>
 </html>
