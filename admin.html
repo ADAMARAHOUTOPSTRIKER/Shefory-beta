@@ -81,6 +81,37 @@ td{padding:12px 10px;border-top:1px solid var(--line);font-size:13.5px}
 </style>
 </head>
 <body>
+<style>
+.gate{position:fixed;inset:0;background:linear-gradient(160deg,#0E7C66,#083f35);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+.gate.hide{display:none}
+.gate-card{background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 24px 70px #0007}
+.glogo{font-weight:850;font-size:21px;display:flex;align-items:center;gap:8px}
+.glogo .muted{color:var(--muted);font-weight:700}
+.glogo .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+.gsub{color:var(--muted);font-size:13px;margin:6px 0 18px}
+.gate-card input{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 13px;font-size:14.5px;margin-bottom:10px;outline:none;font-family:inherit}
+.gate-card input:focus{border-color:var(--primary)}
+.gerr{color:var(--danger);font-size:13px;min-height:18px;margin-bottom:6px}
+.glink{display:block;width:100%;text-align:center;color:var(--primary-600);font-weight:650;font-size:13px;margin-top:14px;background:none}
+.gnote{color:var(--faint);font-size:11.5px;text-align:center;margin:12px 0 0}
+.atoast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#13201Cf2;color:#fff;padding:11px 18px;border-radius:12px;font-size:13.5px;z-index:1200;opacity:0;transition:.25s;pointer-events:none}
+.atoast.on{opacity:1;bottom:34px}
+</style>
+
+<div class="gate" id="adminGate">
+  <div class="gate-card">
+    <div class="glogo"><span class="dot"></span> Shefory <span class="muted">Admin</span></div>
+    <p class="gsub">Accès réservé à l'administration</p>
+    <input id="agEmail" type="email" placeholder="Email admin" autocomplete="email" onkeydown="if(event.key==='Enter')adminLogin()">
+    <input id="agPass" type="password" placeholder="Mot de passe" autocomplete="current-password" onkeydown="if(event.key==='Enter')adminLogin()">
+    <div class="gerr" id="agErr"></div>
+    <button class="btn btn-primary btn-block btn-lg" id="agBtn" onclick="adminLogin()">Se connecter</button>
+    <button class="glink" onclick="adminDemo()">Voir la démo (données fictives)</button>
+    <p class="gnote">Démo : admin@demo.shefory.app · shefory123</p>
+  </div>
+</div>
+<div class="atoast" id="atoast"></div>
+
 <div class="app">
   <!-- SIDEBAR -->
   <aside class="side">
@@ -107,30 +138,22 @@ td{padding:12px 10px;border-top:1px solid var(--line);font-size:13.5px}
       </div>
 
       <div class="kpis">
-        <div class="kpi"><div class="lab"><span class="ic">🚗</span> Chauffeurs actifs</div><div class="val">1 247</div><div class="chg up">▲ 8,2% vs mois préc.</div></div>
-        <div class="kpi"><div class="lab"><span class="ic">⭐</span> Abonnements payants</div><div class="val">834</div><div class="chg up">▲ 12,5%</div></div>
-        <div class="kpi"><div class="lab"><span class="ic">💰</span> Revenu mensuel (MRR)</div><div class="val">6,42 M</div><div class="chg up">▲ 9,1% · FCFA</div></div>
-        <div class="kpi"><div class="lab"><span class="ic">⚖️</span> Litiges ouverts</div><div class="val">7</div><div class="chg down">▲ 2 à traiter</div></div>
+        <div class="kpi"><div class="lab"><span class="ic">🚗</span> Chauffeurs actifs</div><div class="val" id="kpiDrivers">—</div><div class="chg up">base inscrite</div></div>
+        <div class="kpi"><div class="lab"><span class="ic">⭐</span> Abonnements payants</div><div class="val" id="kpiSubs">—</div><div class="chg up">actifs</div></div>
+        <div class="kpi"><div class="lab"><span class="ic">💰</span> Revenu mensuel (MRR)</div><div class="val" id="kpiMRR">—</div><div class="chg up">FCFA · ce mois</div></div>
+        <div class="kpi"><div class="lab"><span class="ic">⚖️</span> Litiges ouverts</div><div class="val" id="kpiDisp">—</div><div class="chg down">à traiter</div></div>
       </div>
 
       <div class="grid2">
         <div class="panel">
           <h3>Revenu d'abonnements</h3>
-          <div class="psub">Recettes mensuelles, 8 derniers mois (millions FCFA)</div>
+          <div class="psub" id="chartSub">Recettes mensuelles, 8 derniers mois</div>
           <div class="chart" id="chart"></div>
         </div>
         <div class="panel">
           <h3>Répartition par pack</h3>
-          <div class="psub">834 abonnements actifs</div>
-          <div class="donut-wrap">
-            <div class="donut"><b>834</b></div>
-            <div class="legend">
-              <div><span class="dotc" style="background:#D9A32B"></span> Or — 384 <span class="sub">(46%)</span></div>
-              <div><span class="dotc" style="background:#8C97A2"></span> Argent — 234 <span class="sub">(28%)</span></div>
-              <div><span class="dotc" style="background:#B87A4B"></span> Bronze — 150 <span class="sub">(18%)</span></div>
-              <div><span class="dotc" style="background:#E7EAE7"></span> Gratuit — 413</div>
-            </div>
-          </div>
+          <div class="psub" id="donutSub">Chauffeurs par pack</div>
+          <div class="donut-wrap" id="donutWrap"></div>
         </div>
       </div>
 
@@ -151,9 +174,9 @@ td{padding:12px 10px;border-top:1px solid var(--line);font-size:13.5px}
       <div class="head"><div><h1>Paiements</h1><div class="sub">Transactions d'abonnements · Mobile Money & carte</div></div>
         <div class="actions"><button class="btn btn-ghost">⬇ Exporter CSV</button></div></div>
       <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
-        <div class="kpi"><div class="lab">Encaissé ce mois</div><div class="val">6,42 M</div><div class="chg up">FCFA</div></div>
-        <div class="kpi"><div class="lab">En attente</div><div class="val">312 K</div><div class="chg">4 transactions</div></div>
-        <div class="kpi"><div class="lab">Taux d'échec</div><div class="val">2,1%</div><div class="chg up">▼ 0,4%</div></div>
+        <div class="kpi"><div class="lab">Encaissé ce mois</div><div class="val" id="kpiCash">—</div><div class="chg up">FCFA</div></div>
+        <div class="kpi"><div class="lab">En attente</div><div class="val" id="kpiPending">—</div><div class="chg" id="kpiPendingSub">transactions</div></div>
+        <div class="kpi"><div class="lab">Taux d'échec</div><div class="val" id="kpiFail">—</div><div class="chg">sur le total</div></div>
       </div>
       <div class="panel">
         <div class="tabs-row"><button class="on">Toutes</button><button>Réussies</button><button>En attente</button><button>Échouées</button></div>
@@ -168,7 +191,7 @@ td{padding:12px 10px;border-top:1px solid var(--line);font-size:13.5px}
     <section id="p-disp" class="hide">
       <div class="head"><div><h1>Litiges</h1><div class="sub">Signalements clients ↔ chauffeurs à arbitrer</div></div></div>
       <div class="panel">
-        <div class="tabs-row"><button class="on">Ouverts (7)</button><button>En cours</button><button>Résolus</button></div>
+        <div class="tabs-row"><button class="on" id="dispTabOpen">Ouverts</button><button>En cours</button><button>Résolus</button></div>
         <table>
           <thead><tr><th>#</th><th>Parties</th><th>Motif</th><th>Priorité</th><th>Statut</th><th>Action</th></tr></thead>
           <tbody id="dispTable"></tbody>
@@ -180,9 +203,9 @@ td{padding:12px 10px;border-top:1px solid var(--line);font-size:13.5px}
     <section id="p-drv" class="hide">
       <div class="head"><div><h1>Chauffeurs</h1><div class="sub">Vérification des documents & modération</div></div></div>
       <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
-        <div class="kpi"><div class="lab">À vérifier</div><div class="val">23</div><div class="chg down">Documents en attente</div></div>
-        <div class="kpi"><div class="lab">Vérifiés</div><div class="val">1 224</div><div class="chg up">98% de la base</div></div>
-        <div class="kpi"><div class="lab">Suspendus</div><div class="val">5</div><div class="chg">Modération</div></div>
+        <div class="kpi"><div class="lab">À vérifier</div><div class="val" id="kpiToVerify">—</div><div class="chg down">en attente</div></div>
+        <div class="kpi"><div class="lab">Vérifiés</div><div class="val" id="kpiVerified">—</div><div class="chg up">de la base</div></div>
+        <div class="kpi"><div class="lab">Inactifs</div><div class="val" id="kpiSuspended">—</div><div class="chg">masqués</div></div>
       </div>
       <div class="panel">
         <div class="tabs-row"><button class="on">À vérifier</button><button>Actifs</button><button>Suspendus</button></div>
@@ -196,6 +219,10 @@ td{padding:12px 10px;border-top:1px solid var(--line);font-size:13.5px}
   </main>
 </div>
 
+<script src="js/vendor/supabase.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/realtime.js"></script>
+<script src="js/admin.js"></script>
 <script>
 /* nav */
 function nav(p,el){
@@ -204,67 +231,8 @@ function nav(p,el){
   document.querySelectorAll('.nav a').forEach(a=>a.classList.remove('on'));el.classList.add('on');
   window.scrollTo(0,0);
 }
-/* chart */
-const data=[3.1,3.4,3.9,4.2,4.8,5.3,5.9,6.42];const labels=['Déc','Jan','Fév','Mar','Avr','Mai','Jun','Jul'];
-const max=Math.max(...data);
-document.getElementById('chart').innerHTML=data.map((v,i)=>`
-  <div class="bar-wrap"><div class="bar" style="height:${v/max*100}%;${i===data.length-1?'background:linear-gradient(180deg,#F2A03D,#e0891f)':''}"><span>${v}M</span></div><small>${labels[i]}</small></div>`).join('');
-
-/* recent activity */
-const av=(i,c,cls)=>`<div class="av ${cls||''}" style="background:${c}">${i}</div>`;
-const recent=[
-  ['IN','Ibrahima Ndiaye','Renouvellement','Or','15 000','ok',"Aujourd'hui"],
-  ['AT','Aïcha Traoré','Nouvel abonnement','Argent','7 000','ok',"Aujourd'hui"],
-  ['KM','Kwame Mensah','Renouvellement','Or','15 000','ok','Hier'],
-  ['FD','Fatou Diallo','Nouvel abonnement','Bronze','3 000','pend','Hier'],
-  ['MK','Moussa Koné','Échec paiement','Argent','7 000','fail','2 j'],
-];
-const stmap={ok:['st-ok','Réussi'],pend:['st-pend','En attente'],fail:['st-open','Échec']};
-document.getElementById('recent').innerHTML=recent.map(r=>`
-  <tr><td><div class="tr-name"><div class="av c3" style="width:32px;height:32px;font-size:12px">${r[0]}</div>${r[1]}</div></td>
-  <td>${r[2]}</td><td>${r[3]}</td><td><b>${r[4]} FCFA</b></td>
-  <td><span class="st ${stmap[r[5]][0]}">${stmap[r[5]][1]}</span></td><td class="sub">${r[6]}</td></tr>`).join('');
-
-/* payments table */
-const pays=[
-  ['#PAY-8842','IN','Ibrahima Ndiaye','🌊 Wave','Or','15 000','ok'],
-  ['#PAY-8841','AT','Aïcha Traoré','🟠 Orange Money','Argent','7 000','ok'],
-  ['#PAY-8840','KM','Kwame Mensah','🌊 Wave','Or','15 000','ok'],
-  ['#PAY-8839','FD','Fatou Diallo','🟡 MTN MoMo','Bronze','3 000','pend'],
-  ['#PAY-8838','MK','Moussa Koné','💳 Carte','Argent','7 000','fail'],
-  ['#PAY-8837','—','Aminata Ba','🔵 Moov Money','Argent','7 000','ok'],
-];
-document.getElementById('payTable').innerHTML=pays.map(p=>`
-  <tr><td><b>${p[0]}</b></td><td>${p[2]}</td><td>${p[3]}</td><td>${p[4]}</td><td><b>${p[5]} FCFA</b></td>
-  <td><span class="st ${stmap[p[6]][0]}">${stmap[p[6]][1]}</span></td>
-  <td>${p[6]==='fail'?'<button class="mini-btn">Relancer</button>':'<button class="mini-btn g">Reçu</button>'}</td></tr>`).join('');
-
-/* disputes */
-const disp=[
-  ['#L-142','Mariam S. ↔ Moussa K.','Chauffeur non présenté','Haute','open'],
-  ['#L-141','Omar D. ↔ Fatou D.','Désaccord sur le tarif','Moyenne','open'],
-  ['#L-140','Awa N. ↔ Kwame M.','Comportement inapproprié','Haute','open'],
-  ['#L-139','Client ↔ Ibrahima N.','Retard répété','Basse','open'],
-];
-const prio={Haute:'st-open',Moyenne:'st-pend',Basse:'st-res'};
-document.getElementById('dispTable').innerHTML=disp.map(d=>`
-  <tr><td><b>${d[0]}</b></td><td>${d[1]}</td><td>${d[2]}</td>
-  <td><span class="st ${prio[d[3]]}">${d[3]}</span></td>
-  <td><span class="st st-open">Ouvert</span></td>
-  <td><button class="mini-btn">Arbitrer</button> <button class="mini-btn g">Détails</button></td></tr>`).join('');
-
-/* drivers to verify */
-const drv=[
-  ['AB','Aminata Ba','Dakar','Argent','Permis, Assurance','pend'],
-  ['SD','Seydou Diarra','Bamako','Bronze','Carte grise manquante','miss'],
-  ['NG','Nadia Gueye','Thiès','Or','Tous fournis','pend'],
-  ['YT','Yao Touré','Abidjan','Argent','Assurance expirée','miss'],
-];
-document.getElementById('drvTable').innerHTML=drv.map(d=>`
-  <tr><td><div class="tr-name"><div class="av c2" style="width:32px;height:32px;font-size:12px">${d[0]}</div>${d[1]}</div></td>
-  <td>${d[2]}</td><td>${d[3]}</td><td class="${d[5]==='miss'?'':''}">${d[4]}</td>
-  <td><span class="st ${d[5]==='miss'?'st-open':'st-pend'}">${d[5]==='miss'?'Incomplet':'À vérifier'}</span></td>
-  <td><button class="mini-btn">✅ Valider</button> <button class="mini-btn d">Refuser</button></td></tr>`).join('');
+/* démarrage : portail admin puis chargement des données réelles */
+bootAdmin();
 </script>
 </body>
 </html>
