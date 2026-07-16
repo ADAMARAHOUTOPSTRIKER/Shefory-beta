@@ -13,9 +13,11 @@
 <link rel="stylesheet" href="styles.css">
 <style>
 /* ---------- device shell ---------- */
-.stage{min-height:100vh;display:flex;align-items:center;justify-content:center;
+html,body{height:100%}
+.stage{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;
   background:radial-gradient(1200px 600px at 50% -10%,#e9f2ee,#eef0ed);padding:0}
-.phone{position:relative;width:100%;max-width:430px;height:100vh;background:var(--bg);
+/* mobile : plein écran réel (dvh = hauteur visible, barre d'adresse exclue) */
+.phone{position:relative;width:100%;max-width:430px;height:100vh;height:100dvh;background:var(--bg);
   overflow:hidden;display:flex;flex-direction:column}
 @media(min-width:720px){
   .stage{padding:34px}
@@ -32,7 +34,7 @@
 /* ---------- generic ---------- */
 .pad{padding:18px 18px 26px}
 .topbar{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
-  display:flex;align-items:center;gap:12px;padding:14px 16px}
+  display:flex;align-items:center;gap:12px;padding:14px 16px;padding-top:calc(14px + env(safe-area-inset-top))}
 .topbar .tt{font-weight:750;font-size:17px}
 .icon-btn{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:18px;background:#EEF1EF;color:var(--ink)}
 .sub{color:var(--muted);font-size:13.5px}
@@ -55,7 +57,8 @@
 
 /* ---------- splash ---------- */
 #splash{background:linear-gradient(160deg,#0E7C66 0%,#0a5c4d 60%,#083f35 100%);color:#fff;height:100%;
-  display:flex;flex-direction:column;padding:34px 26px 30px}
+  display:flex;flex-direction:column;
+  padding:calc(34px + env(safe-area-inset-top)) 26px calc(30px + env(safe-area-inset-bottom))}
 #splash .logo{font-size:26px;font-weight:850;letter-spacing:-.4px;display:flex;align-items:center;gap:9px}
 #splash .dot{width:11px;height:11px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 5px #f2a03d33}
 #splash .hero{margin-top:auto}
@@ -98,9 +101,10 @@
 .dcard .price b{color:var(--ink);font-size:14.5px}
 .rankstripe{position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:4px 0 0 4px}
 .sponsored{position:absolute;top:12px;right:12px;font-size:10.5px;font-weight:700;color:var(--faint)}
+.dcard:has(.sponsored) .top{padding-right:74px}
 
 /* ---------- profile ---------- */
-.phead{background:linear-gradient(160deg,#0E7C66,#0a5245);color:#fff;padding:20px 18px 22px}
+.phead{background:linear-gradient(160deg,#0E7C66,#0a5245);color:#fff;padding:20px 18px 22px;padding-top:calc(20px + env(safe-area-inset-top))}
 .phead .av{width:78px;height:78px;font-size:26px;border:3px solid #ffffff44}
 .phead .nm{font-size:21px;font-weight:800;display:flex;align-items:center;gap:8px}
 .statrow{display:flex;background:var(--surface);border-bottom:1px solid var(--line)}
