@@ -98,7 +98,7 @@ window.subscribeToPack = async function (tier, method) {
   const pay = await sbClient.from("payments").insert({
     subscription_id: sub.id,
     driver_id: me.id,
-    amount_xof: pack.price_xof,
+    amount_mad: pack.price_mad,
     method,
     status: "succeeded",
     paid_at: now.toISOString(),

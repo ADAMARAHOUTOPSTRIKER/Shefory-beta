@@ -74,7 +74,7 @@ window.sendMessageDB = async function (convId, { kind = "text", body = null, amo
   const me = SB.user();
   const { data, error } = await sbClient
     .from("messages")
-    .insert({ conversation_id: convId, sender_id: me.id, kind, body, amount_xof: amount })
+    .insert({ conversation_id: convId, sender_id: me.id, kind, body, amount_mad: amount })
     .select()
     .single();
   if (error) throw error;

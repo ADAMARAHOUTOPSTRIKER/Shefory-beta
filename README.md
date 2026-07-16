@@ -1,7 +1,7 @@
 # MonChauffeur — prototype cliquable
 
 Marketplace qui connecte des **chauffeurs privés** avec des **personnes cherchant un chauffeur régulier**.
-Prototype d'écrans (aucun backend pour l'instant) — pensé **mobile-first / PWA**, marché **Afrique francophone** (FCFA + Mobile Money).
+Prototype d'écrans (aucun backend pour l'instant) — pensé **mobile-first / PWA**, marché **Maroc** (dirham DH + carte CMI / paiement mobile).
 
 ## Ouvrir le prototype
 
@@ -20,7 +20,7 @@ Ouvre simplement les fichiers dans un navigateur (aucune installation) :
 **Côté chauffeur** (bouton « Je suis chauffeur ») :
 - Tableau de bord (vues, position au classement, complétion du profil)
 - Écran **Abonnement** : packs Bronze / Argent / Or
-- **Paiement Mobile Money simulé** (Wave, Orange Money, MTN, Moov) → confirmation
+- **Paiement simulé** (carte CMI, Orange Money, inwi money, Cash Plus) → confirmation
 
 **Admin** (`admin.html`) : tableau de bord (MRR, revenus par mois, répartition par pack), **paiements**, **litiges**, **vérification des chauffeurs**.
 
@@ -28,9 +28,9 @@ Ouvre simplement les fichiers dans un navigateur (aucune installation) :
 
 | Pack | Prix indicatif | Avantage classement |
 |------|----------------|---------------------|
-| Bronze | 3 000 FCFA/mois | Visible, classement standard |
-| Argent | 7 000 FCFA/mois | 2× visibilité dans la zone, badge |
-| Or (Premium) | 15 000 FCFA/mois | Top du classement + page d'accueil |
+| Bronze | 49 DH/mois | Visible, classement standard |
+| Argent | 99 DH/mois | 2× visibilité dans la zone, badge |
+| Or (Premium) | 199 DH/mois | Top du classement + page d'accueil |
 
 ## Prochaines étapes (une fois le design validé)
 
@@ -38,7 +38,7 @@ Ouvre simplement les fichiers dans un navigateur (aucune installation) :
 2. Profils chauffeurs + upload documents (badge vérifié)
 3. Recherche + moteur de **classement** (pack + note + taux de réponse)
 4. Messagerie **temps réel** (Supabase Realtime)
-5. Paiements récurrents réels (**Stripe** et/ou agrégateur Mobile Money type Wave/PayDunya/CinetPay)
+5. Paiements récurrents réels (**CMI** et/ou agrégateur marocain type PayZone/YouCan Pay)
 6. App web admin câblée (litiges, paiements, stats)
 7. Conformité (RGPD/consentement, modération, anti-abus)
 

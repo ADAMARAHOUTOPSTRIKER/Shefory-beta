@@ -26,7 +26,7 @@ async function loadDriverForm(){
       pfSet("pfName", d.display_name); pfSet("pfCity", d.city);
       pfSet("pfModel", d.vehicle_model); pfSet("pfYear", d.vehicle_year);
       pfSet("pfZones", (d.zones || []).join(", ")); pfSet("pfBio", d.bio);
-      pfSet("pfPrice", d.price_month_xof);
+      pfSet("pfPrice", d.price_month_mad);
       document.querySelectorAll("#pfVehType .selopt").forEach(o =>
         o.classList.toggle("on", o.dataset.v === d.vehicle_type));
     }
@@ -79,7 +79,7 @@ async function saveDriverForm(){
     vehicle_year: parseInt(pfGet("pfYear"), 10) || null,
     zones,
     bio: pfGet("pfBio") || null,
-    price_month_xof: parseInt(pfGet("pfPrice").replace(/\D/g, ""), 10) || null,
+    price_month_mad: parseInt(pfGet("pfPrice").replace(/\D/g, ""), 10) || null,
   };
   pfMsg("Enregistrement…");
   try {

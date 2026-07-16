@@ -17,7 +17,7 @@ function relDate(iso){ const d=new Date(iso), n=new Date(); const days=Math.floo
 const ST_PAY   = {succeeded:['st-ok','Réussi'],pending:['st-pend','En attente'],failed:['st-open','Échec'],refunded:['st-res','Remboursé']};
 const ST_DISP  = {open:['st-open','Ouvert'],in_review:['st-pend','En cours'],resolved:['st-ok','Résolu'],rejected:['st-res','Rejeté']};
 const PRIO     = {high:['st-open','Haute'],medium:['st-pend','Moyenne'],low:['st-res','Basse']};
-const MM_EMOJI = {wave:'🌊 Wave',orange_money:'🟠 Orange Money',mtn_momo:'🟡 MTN MoMo',moov_money:'🔵 Moov Money',card:'💳 Carte',manual:'✍️ Manuel'};
+const MM_EMOJI = {card:'💳 Carte (CMI)',orange_money:'🟠 Orange Money',inwi_money:'🟣 inwi money',cash_plus:'🟡 Cash Plus',wave:'🌊 Wave',mtn_momo:'🟡 MTN MoMo',moov_money:'🔵 Moov Money',manual:'✍️ Manuel'};
 const TIER_LBL = {gold:'Or',silver:'Argent',bronze:'Bronze'};
 function driverName(dmap,id){ return (dmap[id] && dmap[id].display_name) || '—'; }
 
@@ -59,7 +59,7 @@ async function loadLiveAdmin(){
   const [drvR, subR, payR, dispR] = await Promise.all([
     sbClient.from('drivers').select('id,display_name,city,pack_tier,verification_status,is_active,created_at').order('rank_score',{ascending:false}),
     sbClient.from('subscriptions').select('id,driver_id,tier,status').eq('status','active'),
-    sbClient.from('payments').select('id,driver_id,amount_xof,method,status,created_at').order('created_at',{ascending:false}),
+    sbClient.from('payments').select('id,driver_id,amount_mad,method,status,created_at').order('created_at',{ascending:false}),
     sbClient.from('disputes').select('*').order('created_at',{ascending:false}),
   ]);
   for(const r of [drvR,subR,payR,dispR]){ if(r.error) throw r.error; }
@@ -78,7 +78,7 @@ function renderKPIs(drivers,subs,pays,disputes){
   const succ=pays.filter(p=>p.status==='succeeded');
   setTxt('kpiDrivers', fmtInt(drivers.filter(d=>d.is_active).length));
   setTxt('kpiSubs',    fmtInt(subs.length));
-  const mrr=succ.filter(p=>isThisMonth(p.created_at)).reduce((s,p)=>s+(p.amount_xof||0),0);
+  const mrr=succ.filter(p=>isThisMonth(p.created_at)).reduce((s,p)=>s+(p.amount_mad||0),0);
   setTxt('kpiMRR', fmtMoney(mrr));
   const openDisp=disputes.filter(d=>d.status==='open').length;
   setTxt('kpiDisp', fmtInt(openDisp));
@@ -86,7 +86,7 @@ function renderKPIs(drivers,subs,pays,disputes){
 
   setTxt('kpiCash', fmtMoney(mrr));
   const pending=pays.filter(p=>p.status==='pending');
-  setTxt('kpiPending', fmtMoney(pending.reduce((s,p)=>s+(p.amount_xof||0),0)));
+  setTxt('kpiPending', fmtMoney(pending.reduce((s,p)=>s+(p.amount_mad||0),0)));
   setTxt('kpiPendingSub', pending.length+' transaction'+(pending.length>1?'s':''));
   const failRate = pays.length ? (100*pays.filter(p=>p.status==='failed').length/pays.length) : 0;
   setTxt('kpiFail', failRate.toFixed(1).replace('.',',')+'%');
@@ -100,11 +100,11 @@ function renderChart(pays){
   const succ=pays.filter(p=>p.status==='succeeded');
   const now=new Date(); const buckets=[];
   for(let i=7;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); buckets.push({y:d.getFullYear(),m:d.getMonth(),label:d.toLocaleDateString('fr-FR',{month:'short'}),sum:0}); }
-  succ.forEach(p=>{ const d=new Date(p.created_at); const b=buckets.find(x=>x.y===d.getFullYear()&&x.m===d.getMonth()); if(b) b.sum+=p.amount_xof||0; });
+  succ.forEach(p=>{ const d=new Date(p.created_at); const b=buckets.find(x=>x.y===d.getFullYear()&&x.m===d.getMonth()); if(b) b.sum+=p.amount_mad||0; });
   const max=Math.max(1,...buckets.map(b=>b.sum));
   const unit = max>=1e6?'M':max>=1e3?'K':'';
   const val=v=> unit==='M'?(v/1e6).toFixed(1): unit==='K'?Math.round(v/1e3): v;
-  setTxt('chartSub','Recettes mensuelles, 8 derniers mois'+(unit?(' ('+(unit==='M'?'millions':'milliers')+' FCFA)'):' (FCFA)'));
+  setTxt('chartSub','Recettes mensuelles, 8 derniers mois'+(unit?(' ('+(unit==='M'?'millions':'milliers')+' DH)'):' (DH)'));
   document.getElementById('chart').innerHTML=buckets.map((b,i)=>`
     <div class="bar-wrap"><div class="bar" style="height:${Math.max(2,b.sum/max*100)}%;${i===buckets.length-1?'background:linear-gradient(180deg,#F2A03D,#e0891f)':''}"><span>${b.sum?val(b.sum)+unit:''}</span></div><small>${b.label}</small></div>`).join('');
 }
@@ -138,7 +138,7 @@ function renderRecent(pays,dmap){
     const tier=dmap[p.driver_id]?dmap[p.driver_id].pack_tier:null;
     const ev=p.status==='succeeded'?'Abonnement':p.status==='pending'?'En attente':'Échec paiement';
     return `<tr><td><div class="tr-name"><div class="av c3" style="width:32px;height:32px;font-size:12px">${initials(nm)}</div>${esc(nm)}</div></td>
-      <td>${ev}</td><td>${TIER_LBL[tier]||'—'}</td><td><b>${fmtInt(p.amount_xof)} FCFA</b></td>
+      <td>${ev}</td><td>${TIER_LBL[tier]||'—'}</td><td><b>${fmtInt(p.amount_mad)} DH</b></td>
       <td><span class="st ${st[0]}">${st[1]}</span></td><td class="sub">${relDate(p.created_at)}</td></tr>`;
   }).join('');
 }
@@ -151,7 +151,7 @@ function renderPayments(pays,dmap){
     const tier=dmap[p.driver_id]?dmap[p.driver_id].pack_tier:null;
     const id='PAY-'+String(p.id).replace(/-/g,'').slice(0,4).toUpperCase();
     return `<tr><td><b>#${id}</b></td><td>${esc(nm)}</td><td>${MM_EMOJI[p.method]||esc(p.method)}</td>
-      <td>${TIER_LBL[tier]||'—'}</td><td><b>${fmtInt(p.amount_xof)} FCFA</b></td>
+      <td>${TIER_LBL[tier]||'—'}</td><td><b>${fmtInt(p.amount_mad)} DH</b></td>
       <td><span class="st ${st[0]}">${st[1]}</span></td>
       <td>${p.status==='failed'?`<button class="mini-btn" onclick="atoast('Relance envoyée (simulée)')">Relancer</button>`:`<button class="mini-btn g" onclick="atoast('Reçu #${id}')">Reçu</button>`}</td></tr>`;
   }).join('');
@@ -199,12 +199,12 @@ window.resolveDispute = async function(id){
 
 /* ---------------- repli démo (données fictives) ---------------- */
 function loadDemoAdmin(){
-  setTxt('kpiDrivers','1 247'); setTxt('kpiSubs','834'); setTxt('kpiMRR','6,42 M'); setTxt('kpiDisp','7');
-  setTxt('kpiCash','6,42 M'); setTxt('kpiPending','312 K'); setTxt('kpiPendingSub','4 transactions'); setTxt('kpiFail','2,1%');
+  setTxt('kpiDrivers','1 247'); setTxt('kpiSubs','834'); setTxt('kpiMRR','64 K'); setTxt('kpiDisp','7');
+  setTxt('kpiCash','64 K'); setTxt('kpiPending','3,1 K'); setTxt('kpiPendingSub','4 transactions'); setTxt('kpiFail','2,1%');
   setTxt('kpiToVerify','23'); setTxt('kpiVerified','1 224'); setTxt('kpiSuspended','5');
-  const data=[3.1,3.4,3.9,4.2,4.8,5.3,5.9,6.42], labels=['Déc','Jan','Fév','Mar','Avr','Mai','Jun','Jul'], max=Math.max(...data);
-  document.getElementById('chart').innerHTML=data.map((v,i)=>`<div class="bar-wrap"><div class="bar" style="height:${v/max*100}%;${i===data.length-1?'background:linear-gradient(180deg,#F2A03D,#e0891f)':''}"><span>${v}M</span></div><small>${labels[i]}</small></div>`).join('');
-  setTxt('chartSub','Recettes mensuelles, 8 derniers mois (millions FCFA) — démo');
+  const data=[31,34,39,42,48,53,59,64], labels=['Déc','Jan','Fév','Mar','Avr','Mai','Jun','Jul'], max=Math.max(...data);
+  document.getElementById('chart').innerHTML=data.map((v,i)=>`<div class="bar-wrap"><div class="bar" style="height:${v/max*100}%;${i===data.length-1?'background:linear-gradient(180deg,#F2A03D,#e0891f)':''}"><span>${v}K</span></div><small>${labels[i]}</small></div>`).join('');
+  setTxt('chartSub','Recettes mensuelles, 8 derniers mois (milliers DH) — démo');
   setTxt('donutSub','834 abonnements actifs');
   document.getElementById('donutWrap').innerHTML=`<div class="donut" style="background:conic-gradient(#D9A32B 0 46%,#8C97A2 46% 74%,#B87A4B 74% 92%,#E7EAE7 92% 100%)"><b>834</b></div>
     <div class="legend"><div><span class="dotc" style="background:#D9A32B"></span> Or — 384 <span class="sub">(46%)</span></div>
@@ -212,13 +212,13 @@ function loadDemoAdmin(){
     <div><span class="dotc" style="background:#B87A4B"></span> Bronze — 150 <span class="sub">(18%)</span></div>
     <div><span class="dotc" style="background:#E7EAE7"></span> Gratuit — 413</div></div>`;
   const dm={ok:['st-ok','Réussi'],pend:['st-pend','En attente'],fail:['st-open','Échec']};
-  const recent=[['Ibrahima Ndiaye','Abonnement','Or','15 000','ok',"Aujourd'hui"],['Aïcha Traoré','Abonnement','Argent','7 000','ok',"Aujourd'hui"],['Kwame Mensah','Abonnement','Or','15 000','ok','Hier'],['Fatou Diallo','Abonnement','Bronze','3 000','pend','Hier'],['Moussa Koné','Échec paiement','Argent','7 000','fail','2 j']];
-  document.getElementById('recent').innerHTML=recent.map(r=>`<tr><td><div class="tr-name"><div class="av c3" style="width:32px;height:32px;font-size:12px">${initials(r[0])}</div>${r[0]}</div></td><td>${r[1]}</td><td>${r[2]}</td><td><b>${r[3]} FCFA</b></td><td><span class="st ${dm[r[4]][0]}">${dm[r[4]][1]}</span></td><td class="sub">${r[5]}</td></tr>`).join('');
-  const pays=[['8842','Ibrahima Ndiaye','🌊 Wave','Or','15 000','ok'],['8841','Aïcha Traoré','🟠 Orange Money','Argent','7 000','ok'],['8840','Kwame Mensah','🌊 Wave','Or','15 000','ok'],['8839','Fatou Diallo','🟡 MTN MoMo','Bronze','3 000','pend'],['8838','Moussa Koné','💳 Carte','Argent','7 000','fail']];
-  document.getElementById('payTable').innerHTML=pays.map(p=>`<tr><td><b>#PAY-${p[0]}</b></td><td>${p[1]}</td><td>${p[2]}</td><td>${p[3]}</td><td><b>${p[4]} FCFA</b></td><td><span class="st ${dm[p[5]][0]}">${dm[p[5]][1]}</span></td><td>${p[5]==='fail'?'<button class="mini-btn">Relancer</button>':'<button class="mini-btn g">Reçu</button>'}</td></tr>`).join('');
-  const disp=[['L-142','Client ↔ Moussa K.','Chauffeur non présenté','Haute'],['L-141','Client ↔ Fatou D.','Désaccord sur le tarif','Moyenne'],['L-140','Client ↔ Kwame M.','Comportement inapproprié','Haute']];
+  const recent=[['Youssef El Amrani','Abonnement','Or','199','ok',"Aujourd'hui"],['Salma Benkirane','Abonnement','Argent','99','ok',"Aujourd'hui"],['Karim Tazi','Abonnement','Or','199','ok','Hier'],['Fatima Ezzahra Idrissi','Abonnement','Bronze','49','pend','Hier'],['Mehdi Alaoui','Échec paiement','Argent','99','fail','2 j']];
+  document.getElementById('recent').innerHTML=recent.map(r=>`<tr><td><div class="tr-name"><div class="av c3" style="width:32px;height:32px;font-size:12px">${initials(r[0])}</div>${r[0]}</div></td><td>${r[1]}</td><td>${r[2]}</td><td><b>${r[3]} DH</b></td><td><span class="st ${dm[r[4]][0]}">${dm[r[4]][1]}</span></td><td class="sub">${r[5]}</td></tr>`).join('');
+  const pays=[['8842','Youssef El Amrani','💳 Carte (CMI)','Or','199','ok'],['8841','Salma Benkirane','🟠 Orange Money','Argent','99','ok'],['8840','Karim Tazi','🟡 Cash Plus','Or','199','ok'],['8839','Fatima Ezzahra Idrissi','🟣 inwi money','Bronze','49','pend'],['8838','Mehdi Alaoui','💳 Carte (CMI)','Argent','99','fail']];
+  document.getElementById('payTable').innerHTML=pays.map(p=>`<tr><td><b>#PAY-${p[0]}</b></td><td>${p[1]}</td><td>${p[2]}</td><td>${p[3]}</td><td><b>${p[4]} DH</b></td><td><span class="st ${dm[p[5]][0]}">${dm[p[5]][1]}</span></td><td>${p[5]==='fail'?'<button class="mini-btn">Relancer</button>':'<button class="mini-btn g">Reçu</button>'}</td></tr>`).join('');
+  const disp=[['L-142','Client ↔ Mehdi A.','Chauffeur non présenté','Haute'],['L-141','Client ↔ Fatima I.','Désaccord sur le tarif','Moyenne'],['L-140','Client ↔ Karim T.','Comportement inapproprié','Haute']];
   const pr={Haute:'st-open',Moyenne:'st-pend',Basse:'st-res'};
   document.getElementById('dispTable').innerHTML=disp.map(d=>`<tr><td><b>#${d[0]}</b></td><td>${d[1]}</td><td>${d[2]}</td><td><span class="st ${pr[d[3]]}">${d[3]}</span></td><td><span class="st st-open">Ouvert</span></td><td><button class="mini-btn">Résoudre</button> <button class="mini-btn g">Détails</button></td></tr>`).join('');
-  const drv=[['Aminata Ba','Dakar','Argent','pend'],['Seydou Diarra','Bamako','Bronze','miss'],['Nadia Gueye','Thiès','Or','pend']];
+  const drv=[['Amina Berrada','Casablanca','Argent','pend'],['Omar Chraibi','Fès','Bronze','miss'],['Nadia El Fassi','Agadir','Or','pend']];
   document.getElementById('drvTable').innerHTML=drv.map(d=>`<tr><td><div class="tr-name"><div class="av c2" style="width:32px;height:32px;font-size:12px">${initials(d[0])}</div>${d[0]}</div></td><td>${d[1]}</td><td>${d[2]}</td><td class="sub">${d[3]==='miss'?'Documents à fournir':'En attente de revue'}</td><td><span class="st ${d[3]==='miss'?'st-open':'st-pend'}">${d[3]==='miss'?'Incomplet':'À vérifier'}</span></td><td><button class="mini-btn">✅ Valider</button> <button class="mini-btn d">Refuser</button></td></tr>`).join('');
 }
