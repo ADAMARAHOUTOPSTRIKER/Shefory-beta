@@ -267,19 +267,19 @@
     <div class="topbar">
       <div class="av c1" style="width:38px;height:38px;font-size:14px">MC</div>
       <div style="flex:1"><div class="tt">Bonjour 👋</div><div class="sub" style="font-size:12px">Casablanca, Maroc · trouve ton chauffeur</div></div>
-      <button class="icon-btn" onclick="toast('Filtres avancés')">⚙️</button>
+      <button class="icon-btn" onclick="resetFilters()">⚙️</button>
     </div>
     <div class="pad">
       <div class="searchbar">
-        <span>🔎</span><input placeholder="Zone, ville ou type de trajet…">
+        <span>🔎</span><input id="searchInput" placeholder="Zone, ville ou type de trajet…" oninput="applySearch(this.value)">
       </div>
       <div class="chips">
-        <button class="chip on">Tous</button>
-        <button class="chip">⭐ Mieux notés</button>
-        <button class="chip">✅ Vérifiés</button>
-        <button class="chip">🚙 Berline</button>
-        <button class="chip">🚐 Van</button>
-        <button class="chip">💰 Prix ↑</button>
+        <button class="chip on" onclick="setChip(this,'all')">Tous</button>
+        <button class="chip" onclick="setChip(this,'top')">⭐ Mieux notés</button>
+        <button class="chip" onclick="setChip(this,'verified')">✅ Vérifiés</button>
+        <button class="chip" onclick="setChip(this,'berline')">🚙 Berline</button>
+        <button class="chip" onclick="setChip(this,'van')">🚐 Van</button>
+        <button class="chip" onclick="setChip(this,'price')">💰 Prix ↑</button>
       </div>
 
       <div class="promo" style="margin-top:8px">
@@ -287,7 +287,7 @@
         <div style="flex:1"><b>Chauffeurs Premium</b><br><small>Sélection vérifiée, réponse rapide garantie</small></div>
       </div>
 
-      <div class="section-t"><h3>À la une</h3><a>Voir tout</a></div>
+      <div class="section-t"><h3>À la une</h3><a onclick="resetFilters()">Voir tout</a></div>
       <div id="driverList"></div>
     </div>
   </section>
@@ -297,7 +297,7 @@
     <div class="topbar" style="background:transparent;border:none;position:absolute;width:100%">
       <button class="icon-btn" onclick="go('v-search')" style="background:#ffffffe0">←</button>
       <div style="flex:1"></div>
-      <button class="icon-btn" onclick="toast('Ajouté aux favoris ❤️')" style="background:#ffffffe0">♡</button>
+      <button class="icon-btn" id="favBtn" onclick="toggleFav()" style="background:#ffffffe0">♡</button>
     </div>
     <div id="profileBody"></div>
     <div class="sticky-cta">
@@ -308,8 +308,14 @@
 
   <!-- ============ MESSAGES LIST ============ -->
   <section class="view" id="v-messages">
-    <div class="topbar"><div class="tt" style="flex:1">Messages</div><button class="icon-btn" onclick="toast('Recherche')">🔎</button></div>
+    <div class="topbar"><div class="tt" style="flex:1">Messages</div><button class="icon-btn" onclick="searchConvos()">🔎</button></div>
     <div id="convList"></div>
+  </section>
+
+  <!-- ============ FAVORIS ============ -->
+  <section class="view" id="v-favs">
+    <div class="topbar"><div class="tt" style="flex:1">Mes favoris</div></div>
+    <div class="pad" id="favList"></div>
   </section>
 
   <!-- ============ CHAT ============ -->
@@ -319,7 +325,7 @@
         <button class="icon-btn" onclick="backFromChat()">←</button>
         <div class="av c1" id="chatAv" style="width:38px;height:38px;font-size:14px"></div>
         <div style="flex:1"><div class="tt" id="chatName" style="font-size:15px"></div><div class="sub" style="font-size:12px;color:var(--primary)">● en ligne</div></div>
-        <button class="icon-btn" onclick="toast('Signaler / bloquer')">⋯</button>
+        <button class="icon-btn" onclick="reportChat()">⋯</button>
       </div>
       <div class="chat-body" id="chatBody"></div>
       <div class="chat-input">
@@ -427,7 +433,7 @@
   <div class="tabbar hidden" id="tabsClient">
     <button class="tab on" data-t="v-search" onclick="tabTo('v-search',this)"><span class="ic">🔎</span>Rechercher</button>
     <button class="tab" data-t="v-messages" onclick="tabTo('v-messages',this)"><span class="ic">💬</span>Messages</button>
-    <button class="tab" onclick="toast('Tes favoris')"><span class="ic">♡</span>Favoris</button>
+    <button class="tab" onclick="openFavs(this)"><span class="ic">♡</span>Favoris</button>
     <button class="tab" onclick="doLogout()"><span class="ic">👤</span>Compte</button>
   </div>
   <div class="tabbar hidden" id="tabsDriver">
@@ -476,13 +482,12 @@ function hideTabs(){document.getElementById('tabsClient').classList.add('hidden'
 function enterClient(){renderDrivers();go('v-search');showTabs('client');}
 async function enterDriver(){
   go('v-ddash'); showTabs('driver');
-  if(isLive()){ try{ await ensureDriverRow(); }catch(e){ console.warn(e); } refreshDriverDash(); renderPacks(); }
+  if(isLive()&&SB.role()==='driver'){ try{ await ensureDriverRow(); }catch(e){ console.warn(e); } refreshDriverDash(); renderPacks(); }
 }
 
 /* ---------------- driver list ---------------- */
-function renderDrivers(){
-  const l=document.getElementById('driverList');
-  l.innerHTML=drivers.map(d=>`
+function cardHTML(d){
+  return `
    <div class="card dcard" onclick="openProfile(${d.id})">
      <div class="rankstripe" style="background:${stripe[d.pack]}"></div>
      ${d.pack==='gold'?'<span class="sponsored">Sponsorisé ✨</span>':''}
@@ -494,8 +499,42 @@ function renderDrivers(){
        <div class="tags">${d.pack?packBadge[d.pack]:''}${d.tags.slice(0,2).map(t=>`<span class="pill">${t}</span>`).join('')}</div>
        <div class="price"><b>${d.price} DH</b> <span class="sub">/ mois · régulier</span></div>
      </div>
-   </div>`).join('');
+   </div>`;
 }
+let chipMode='all', searchQ='', convFilter='';
+function priceNum(p){return parseInt(String(p).replace(/\D/g,''),10)||0;}
+function filteredDrivers(){
+  let list=drivers.slice();
+  if(searchQ) list=list.filter(d=>[d.name,d.city,d.veh,(d.tags||[]).join(' ')].join(' ').toLowerCase().includes(searchQ));
+  if(chipMode==='verified') list=list.filter(d=>d.verified);
+  if(chipMode==='berline') list=list.filter(d=>/berline/i.test(d.veh));
+  if(chipMode==='van') list=list.filter(d=>/van/i.test(d.veh));
+  if(chipMode==='top') list.sort((a,b)=>b.rating-a.rating);
+  if(chipMode==='price') list.sort((a,b)=>priceNum(a.price)-priceNum(b.price));
+  return list;
+}
+function setChip(el,mode){chipMode=mode;el.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');renderDrivers();}
+function applySearch(v){searchQ=v.trim().toLowerCase();renderDrivers();}
+function resetFilters(){chipMode='all';searchQ='';const i=document.getElementById('searchInput');if(i)i.value='';
+  document.querySelectorAll('#v-search .chip').forEach((c,k)=>c.classList.toggle('on',k===0));renderDrivers();toast('Filtres réinitialisés');}
+function renderDrivers(){
+  const l=document.getElementById('driverList'); if(!l) return;
+  const list=filteredDrivers();
+  l.innerHTML=list.length?list.map(cardHTML).join(''):`<div class="sub" style="text-align:center;padding:34px 10px">Aucun chauffeur ne correspond.<br><a style="color:var(--primary-600);font-weight:700" onclick="resetFilters()">Réinitialiser les filtres</a></div>`;
+}
+/* ---- favoris (localStorage) ---- */
+function favKey(d){return d.dbId||('demo-'+d.id);}
+function getFavs(){try{return JSON.parse(localStorage.getItem('shefory_favs'))||[]}catch(_){return[]}}
+function isFav(d){return d&&getFavs().includes(favKey(d));}
+function toggleFav(){const d=drivers[currentDriver];if(!d)return;let f=getFavs();const k=favKey(d);
+  if(f.includes(k)){f=f.filter(x=>x!==k);toast('Retiré des favoris');}else{f.push(k);toast('Ajouté aux favoris ❤️');}
+  localStorage.setItem('shefory_favs',JSON.stringify(f));updateFavBtn();}
+function updateFavBtn(){const b=document.getElementById('favBtn');if(!b)return;const d=drivers[currentDriver];
+  b.textContent=isFav(d)?'♥':'♡';b.style.color=isFav(d)?'#D24B4B':'';}
+function openFavs(el){tabTo('v-favs',el);renderFavs();}
+function renderFavs(){const f=getFavs();const list=drivers.filter(d=>f.includes(favKey(d)));
+  document.getElementById('favList').innerHTML=list.length?list.map(cardHTML).join(''):
+    `<div class="sub" style="text-align:center;padding:40px 10px">Aucun favori pour l'instant.<br>Appuie sur ♡ sur un profil chauffeur.</div>`;}
 
 /* ---------------- profile ---------------- */
 function openProfile(id){
@@ -539,6 +578,7 @@ function openProfile(id){
       </div>
       <div style="height:12px"></div>
     </div>`;
+  updateFavBtn();
   go('v-profile');
 }
 
@@ -574,7 +614,9 @@ async function renderConvosLive(){
     const convs=await loadConversationsDB(); liveConvIndex={};
     const driverSide=SB.role()==='driver'; const list=document.getElementById('convList');
     if(!convs.length){ list.innerHTML='<div class="pad sub" style="text-align:center;padding-top:44px">Aucune conversation pour l\'instant.<br>Contacte un chauffeur depuis son profil.</div>'; return; }
-    list.innerHTML=convs.map(c=>{
+    const shown=convFilter?convs.filter(c=>((driverSide?c.client_name:c.driver_name)||'').toLowerCase().includes(convFilter)):convs;
+    if(!shown.length){ list.innerHTML=`<div class="pad sub" style="text-align:center;padding-top:44px">Aucun résultat pour « ${escapeHtml(convFilter)} ».<br><a style="color:var(--primary-600);font-weight:700" onclick="convFilter='';renderConvos()">Effacer la recherche</a></div>`; return; }
+    list.innerHTML=shown.map(c=>{
       liveConvIndex[c.id]=c;
       const name=driverSide?(c.client_name||'Client'):(c.driver_name||'Chauffeur');
       const ini=(name||'?').trim().split(/\s+/).map(w=>w[0]||'').slice(0,2).join('').toUpperCase();
@@ -588,12 +630,28 @@ async function renderConvosLive(){
   }catch(e){ console.warn('convos live',e); renderConvosDemo(); }
 }
 function renderConvosDemo(){
-  document.getElementById('convList').innerHTML=convos.map(c=>{const d=drivers[c.id]||drivers[0];return `
+  let list=convos;
+  if(convFilter) list=convos.filter(c=>(drivers[c.id]||drivers[0]).name.toLowerCase().includes(convFilter));
+  document.getElementById('convList').innerHTML=list.length?list.map(c=>{const d=drivers[c.id]||drivers[0];return `
     <div class="convrow" onclick="openChatWith(${c.id})">
       <div class="av ${d.c}">${d.init}</div>
       <div style="flex:1;min-width:0"><div class="nm">${d.name}</div><div class="lm">${c.last}</div></div>
       <div class="rt">${c.time}${c.unread?`<br><span class="unread">${c.unread}</span>`:''}</div>
-    </div>`;}).join('');
+    </div>`;}).join(''):`<div class="pad sub" style="text-align:center;padding-top:44px">Aucun résultat.<br><a style="color:var(--primary-600);font-weight:700" onclick="convFilter='';renderConvos()">Effacer la recherche</a></div>`;
+}
+function searchConvos(){const q=prompt('Rechercher une conversation (nom)');if(q===null)return;convFilter=q.trim().toLowerCase();renderConvos();}
+async function reportChat(){
+  if(liveConv&&isLive()){
+    if(!confirm('Signaler cette conversation à l\'équipe Shefory ?'))return;
+    try{
+      const me=SB.user();const driverSide=SB.role()==='driver';
+      const r=await sbClient.from('disputes').insert({complainant_id:me.id,
+        respondent_id:driverSide?liveConv.client_id:liveConv.driver_id,
+        driver_id:liveConv.driver_id,reason:'Signalement depuis la messagerie',
+        details:'Conversation '+liveConv.id,priority:'medium'});
+      if(r.error)throw r.error;toast('Signalement envoyé ✅');
+    }catch(e){console.warn(e);toast('Signalement impossible');}
+  } else toast('Signalement (démo)');
 }
 
 /* ---- ouvrir un chat ---- */
@@ -787,7 +845,12 @@ async function loadDrivers(){
 /* ---------------- auth flow ---------------- */
 let authMode='login', authRole='client', currentUser=null;
 function startAuth(role){
-  if(SB.isLoggedIn()){ afterLogin(); return; }
+  if(SB.isLoggedIn()){
+    if(role==='driver'&&SB.role()!=='driver'){ toast('Ton compte est un compte client'); enterClient(); }
+    else if(role==='driver'){ enterDriver(); }
+    else { enterClient(); }
+    return;
+  }
   authRole=role; authMode='login'; clearAuthErr(); renderAuth(); go('v-auth');
 }
 function renderAuth(){

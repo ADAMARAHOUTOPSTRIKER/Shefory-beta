@@ -121,8 +121,8 @@ td{padding:12px 10px;border-top:1px solid var(--line);font-size:13.5px}
       <a data-p="pay" onclick="nav('pay',this)"><span class="ic">💳</span> Paiements</a>
       <a data-p="disp" onclick="nav('disp',this)"><span class="ic">⚖️</span> Litiges</a>
       <a data-p="drv" onclick="nav('drv',this)"><span class="ic">🚗</span> Chauffeurs</a>
-      <a onclick="alert('Prototype — écran à venir')"><span class="ic">👥</span> Clients</a>
-      <a onclick="alert('Prototype — écran à venir')"><span class="ic">⚙️</span> Réglages</a>
+      <a data-p="clients" onclick="nav('clients',this)"><span class="ic">👥</span> Clients</a>
+      <a onclick="atoast('Réglages — bientôt disponible')"><span class="ic">⚙️</span> Réglages</a>
     </nav>
     <div class="foot"><div class="av c1">AD</div><div><div style="color:#fff;font-size:13px;font-weight:700">Admin</div><div style="font-size:11px;color:#8ea099">Super-admin</div></div></div>
   </aside>
@@ -134,13 +134,13 @@ td{padding:12px 10px;border-top:1px solid var(--line);font-size:13.5px}
     <section id="p-dash">
       <div class="head">
         <div><h1>Tableau de bord</h1><div class="sub">Vue d'ensemble · Maroc · DH</div></div>
-        <div class="seg"><button class="on">30 jours</button><button>90 jours</button><button>12 mois</button></div>
+        <div class="seg"><button class="on" onclick="setPeriod(this,30,8)">30 jours</button><button onclick="setPeriod(this,90,8)">90 jours</button><button onclick="setPeriod(this,365,12)">12 mois</button></div>
       </div>
 
       <div class="kpis">
         <div class="kpi"><div class="lab"><span class="ic">🚗</span> Chauffeurs actifs</div><div class="val" id="kpiDrivers">—</div><div class="chg up">base inscrite</div></div>
         <div class="kpi"><div class="lab"><span class="ic">⭐</span> Abonnements payants</div><div class="val" id="kpiSubs">—</div><div class="chg up">actifs</div></div>
-        <div class="kpi"><div class="lab"><span class="ic">💰</span> Revenu mensuel (MRR)</div><div class="val" id="kpiMRR">—</div><div class="chg up">DH · ce mois</div></div>
+        <div class="kpi"><div class="lab"><span class="ic">💰</span> Revenu mensuel (MRR)</div><div class="val" id="kpiMRR">—</div><div class="chg up">DH · sur la période</div></div>
         <div class="kpi"><div class="lab"><span class="ic">⚖️</span> Litiges ouverts</div><div class="val" id="kpiDisp">—</div><div class="chg down">à traiter</div></div>
       </div>
 
@@ -172,14 +172,14 @@ td{padding:12px 10px;border-top:1px solid var(--line);font-size:13.5px}
     <!-- ===== PAIEMENTS ===== -->
     <section id="p-pay" class="hide">
       <div class="head"><div><h1>Paiements</h1><div class="sub">Transactions d'abonnements · Mobile Money & carte</div></div>
-        <div class="actions"><button class="btn btn-ghost">⬇ Exporter CSV</button></div></div>
+        <div class="actions"><button class="btn btn-ghost" onclick="exportCSV()">⬇ Exporter CSV</button></div></div>
       <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
         <div class="kpi"><div class="lab">Encaissé ce mois</div><div class="val" id="kpiCash">—</div><div class="chg up">DH</div></div>
         <div class="kpi"><div class="lab">En attente</div><div class="val" id="kpiPending">—</div><div class="chg" id="kpiPendingSub">transactions</div></div>
         <div class="kpi"><div class="lab">Taux d'échec</div><div class="val" id="kpiFail">—</div><div class="chg">sur le total</div></div>
       </div>
       <div class="panel">
-        <div class="tabs-row"><button class="on">Toutes</button><button>Réussies</button><button>En attente</button><button>Échouées</button></div>
+        <div class="tabs-row"><button class="on" onclick="payTab(this,'all')">Toutes</button><button onclick="payTab(this,'succeeded')">Réussies</button><button onclick="payTab(this,'pending')">En attente</button><button onclick="payTab(this,'failed')">Échouées</button></div>
         <table>
           <thead><tr><th>Transaction</th><th>Chauffeur</th><th>Moyen</th><th>Pack</th><th>Montant</th><th>Statut</th><th></th></tr></thead>
           <tbody id="payTable"></tbody>
@@ -191,7 +191,7 @@ td{padding:12px 10px;border-top:1px solid var(--line);font-size:13.5px}
     <section id="p-disp" class="hide">
       <div class="head"><div><h1>Litiges</h1><div class="sub">Signalements clients ↔ chauffeurs à arbitrer</div></div></div>
       <div class="panel">
-        <div class="tabs-row"><button class="on" id="dispTabOpen">Ouverts</button><button>En cours</button><button>Résolus</button></div>
+        <div class="tabs-row"><button class="on" id="dispTabOpen" onclick="dispTab(this,'open')">Ouverts</button><button onclick="dispTab(this,'in_review')">En cours</button><button onclick="dispTab(this,'done')">Résolus</button></div>
         <table>
           <thead><tr><th>#</th><th>Parties</th><th>Motif</th><th>Priorité</th><th>Statut</th><th>Action</th></tr></thead>
           <tbody id="dispTable"></tbody>
@@ -208,10 +208,21 @@ td{padding:12px 10px;border-top:1px solid var(--line);font-size:13.5px}
         <div class="kpi"><div class="lab">Inactifs</div><div class="val" id="kpiSuspended">—</div><div class="chg">masqués</div></div>
       </div>
       <div class="panel">
-        <div class="tabs-row"><button class="on">À vérifier</button><button>Actifs</button><button>Suspendus</button></div>
+        <div class="tabs-row"><button class="on" onclick="drvTab(this,'verify')">À vérifier</button><button onclick="drvTab(this,'active')">Actifs</button><button onclick="drvTab(this,'suspended')">Suspendus</button></div>
         <table>
           <thead><tr><th>Chauffeur</th><th>Ville</th><th>Pack</th><th>Documents</th><th>Statut</th><th>Action</th></tr></thead>
           <tbody id="drvTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== CLIENTS ===== -->
+    <section id="p-clients" class="hide">
+      <div class="head"><div><h1>Clients</h1><div class="sub">Comptes clients inscrits</div></div></div>
+      <div class="panel">
+        <table>
+          <thead><tr><th>Client</th><th>Téléphone</th><th>Ville</th><th>Inscription</th></tr></thead>
+          <tbody id="clientTable"></tbody>
         </table>
       </div>
     </section>
@@ -226,7 +237,7 @@ td{padding:12px 10px;border-top:1px solid var(--line);font-size:13.5px}
 <script>
 /* nav */
 function nav(p,el){
-  ['dash','pay','disp','drv'].forEach(x=>document.getElementById('p-'+x).classList.add('hide'));
+  ['dash','pay','disp','drv','clients'].forEach(x=>document.getElementById('p-'+x).classList.add('hide'));
   document.getElementById('p-'+p).classList.remove('hide');
   document.querySelectorAll('.nav a').forEach(a=>a.classList.remove('on'));el.classList.add('on');
   window.scrollTo(0,0);
