@@ -1,4 +1,4 @@
-# MonChauffeur — prototype cliquable
+# Shefory — beta
 
 Marketplace qui connecte des **chauffeurs privés** avec des **personnes cherchant un chauffeur régulier**.
 Prototype d'écrans (aucun backend pour l'instant) — pensé **mobile-first / PWA**, marché **Maroc** (dirham DH + carte CMI / paiement mobile).
