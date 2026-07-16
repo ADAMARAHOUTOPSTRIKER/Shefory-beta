@@ -96,6 +96,20 @@ td{padding:12px 10px;border-top:1px solid var(--line);font-size:13.5px}
 .gnote{color:var(--faint);font-size:11.5px;text-align:center;margin:12px 0 0}
 .atoast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#13201Cf2;color:#fff;padding:11px 18px;border-radius:12px;font-size:13.5px;z-index:1200;opacity:0;transition:.25s;pointer-events:none}
 .atoast.on{opacity:1;bottom:34px}
+
+/* ===== micro-animations admin ===== */
+@keyframes growUp{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes bump{0%{transform:scale(.92);opacity:.4}100%{transform:scale(1);opacity:1}}
+.main section{animation:fadeUp .28s ease}
+.bar{transform-origin:bottom;animation:growUp .5s cubic-bezier(.2,.8,.2,1) both}
+.kpi{animation:fadeUp .35s both}
+.kpi:nth-child(2){animation-delay:.06s}.kpi:nth-child(3){animation-delay:.12s}.kpi:nth-child(4){animation-delay:.18s}
+.kpi .val.bump{animation:bump .35s ease}
+tbody tr{transition:background .12s}
+tbody tr:hover{background:#f6f8f6}
+.donut-wrap{animation:fadeUp .4s .1s both}
+@media(max-width:900px){.main{padding:18px 14px 40px}}
 </style>
 
 <div class="gate" id="adminGate">

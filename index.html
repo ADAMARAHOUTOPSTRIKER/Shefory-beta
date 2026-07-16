@@ -208,6 +208,59 @@
 .toast{position:absolute;left:50%;bottom:80px;transform:translateX(-50%);background:#13201Cf2;color:#fff;
   padding:11px 16px;border-radius:12px;font-size:13px;z-index:80;opacity:0;transition:.25s;pointer-events:none;white-space:nowrap}
 .toast.on{opacity:1;bottom:92px}
+
+/* ================= micro-animations ================= */
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes popIn{0%{transform:scale(.55);opacity:0}60%{transform:scale(1.14)}100%{transform:scale(1);opacity:1}}
+@keyframes shimmer{0%{background-position:-420px 0}100%{background-position:420px 0}}
+@keyframes blink{0%,80%,100%{opacity:.3;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
+
+/* splash : entrée orchestrée */
+#splash .logo{animation:rise .5s .05s both}
+#splash h1{animation:rise .55s .18s both}
+#splash p{animation:rise .55s .3s both}
+#splash .role-btn{animation:rise .5s .42s both}
+#splash .role-btn.alt{animation-delay:.52s}
+#splash .trust{animation:rise .5s .64s both}
+
+
+/* cartes chauffeurs : cascade + relief */
+.dcard{animation:rise .38s both;animation-delay:calc(var(--i,0)*55ms)}
+@media(hover:hover){
+  .dcard{transition:transform .18s ease,box-shadow .18s ease}
+  .dcard:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+  .pack{transition:transform .18s ease,box-shadow .18s ease}
+  .pack:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+}
+
+/* squelettes de chargement (confiance : jamais d'écran vide) */
+.skel{height:104px;border-radius:var(--r-md);margin-bottom:12px;
+  background:linear-gradient(90deg,#eceeec 25%,#f7f9f7 40%,#eceeec 60%);
+  background-size:420px 100%;animation:shimmer 1.1s infinite linear}
+
+/* messagerie : bulles + indicateur de frappe */
+.bubble-in{animation:popIn .22s ease both}
+.typing{display:inline-flex;gap:4px;align-items:center;min-width:44px}
+.typing i{width:7px;height:7px;border-radius:50%;background:#a9b5ae;animation:blink 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}
+.typing i:nth-child(3){animation-delay:.3s}
+.unread{animation:popIn .3s both}
+
+/* favori */
+#favBtn.pop{animation:popIn .35s ease}
+
+/* formulaires : focus doux */
+.field input:focus,.field textarea:focus,.field select:focus{box-shadow:0 0 0 3px var(--primary-tint)}
+.searchbar{transition:border-color .18s,box-shadow .18s}
+.searchbar:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-tint)}
+.field input,.field textarea,.field select{transition:border-color .18s,box-shadow .18s}
+
+/* confirmations */
+.ok-circle{animation:popIn .45s ease both}
+.progress i{transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.metric .m{animation:rise .4s both}
+.metric .m:nth-child(2){animation-delay:.08s}
+.metric .m:nth-child(3){animation-delay:.16s}
 </style>
 </head>
 <body>
@@ -251,6 +304,7 @@
 
       <div id="authError" class="sub" style="color:var(--danger);min-height:18px;margin:-4px 0 8px;font-size:13px"></div>
       <button class="btn btn-primary btn-block btn-lg" id="authSubmit" onclick="doAuth()">Se connecter</button>
+      <p class="sub" style="text-align:center;font-size:11.5px;margin:10px 0 0">🔒 Connexion chiffrée · tes données restent privées</p>
       <p class="sub" style="text-align:center;margin:14px 0 0">
         <span id="authToggleTxt">Pas encore de compte ?</span>
         <a onclick="toggleAuthMode()" style="color:var(--primary-600);font-weight:700" id="authToggleLink">Inscris-toi</a>
@@ -508,9 +562,9 @@ async function enterDriver(){
 }
 
 /* ---------------- driver list ---------------- */
-function cardHTML(d){
+function cardHTML(d,i){
   return `
-   <div class="card dcard" onclick="openProfile(${d.id})">
+   <div class="card dcard" style="--i:${i||0}" onclick="openProfile(${d.id})">
      <div class="rankstripe" style="background:${stripe[d.pack]}"></div>
      ${d.pack==='gold'?'<span class="sponsored">Sponsorisé ✨</span>':''}
      <div class="av ${d.c}">${d.init}</div>
@@ -550,7 +604,8 @@ function getFavs(){try{return JSON.parse(localStorage.getItem('shefory_favs'))||
 function isFav(d){return d&&getFavs().includes(favKey(d));}
 function toggleFav(){const d=drivers[currentDriver];if(!d)return;let f=getFavs();const k=favKey(d);
   if(f.includes(k)){f=f.filter(x=>x!==k);toast('Retiré des favoris');}else{f.push(k);toast('Ajouté aux favoris ❤️');}
-  localStorage.setItem('shefory_favs',JSON.stringify(f));updateFavBtn();}
+  localStorage.setItem('shefory_favs',JSON.stringify(f));updateFavBtn();
+  const b=document.getElementById('favBtn'); if(b){b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');}}
 function updateFavBtn(){const b=document.getElementById('favBtn');if(!b)return;const d=drivers[currentDriver];
   b.textContent=isFav(d)?'♥':'♡';b.style.color=isFav(d)?'#D24B4B':'';}
 function openFavs(el){tabTo('v-favs',el);renderFavs();}
@@ -710,6 +765,7 @@ function renderLiveChat(){
     return `<div class="msg ${mine?'me':'them'}">${escapeHtml(m.body)}<span class="t">${t}</span></div>`;
   }).join('');
   body.scrollTop=body.scrollHeight;
+  const lb=body.lastElementChild; if(lb&&lb.classList.contains('msg')) lb.classList.add('bubble-in');
 }
 function renderChat(){
   const body=document.getElementById('chatBody');
@@ -719,6 +775,7 @@ function renderChat(){
     return `<div class="msg ${m.k}">${m.t}<span class="t">${m.at||''}</span></div>`;
   }).join('');
   body.scrollTop=body.scrollHeight;
+  const lb=body.lastElementChild; if(lb&&lb.classList.contains('msg')) lb.classList.add('bubble-in');
 }
 async function sendMsg(){
   const i=document.getElementById('chatInput'); const val=i.value.trim(); if(!val)return;
@@ -729,7 +786,10 @@ async function sendMsg(){
     return;
   }
   threads[currentDriver].push({k:'me',t:val,at:'maintenant'});i.value='';renderChat();
-  setTimeout(()=>{threads[currentDriver].push({k:'them',t:'👍 C\'est noté, je reviens vers vous très vite !',at:'maintenant'});renderChat();},900);
+  const cb=document.getElementById('chatBody');
+  const ty=document.createElement('div');ty.className='msg them typing';ty.innerHTML='<i></i><i></i><i></i>';
+  cb.appendChild(ty);cb.scrollTop=cb.scrollHeight;
+  setTimeout(()=>{threads[currentDriver].push({k:'them',t:'👍 C\'est noté, je reviens vers vous très vite !',at:'maintenant'});renderChat();},1200);
 }
 async function quickOffer(){
   if(liveConv){
@@ -857,6 +917,8 @@ function mapDriver(d,i){
   };
 }
 async function loadDrivers(){
+  const sk=document.getElementById('driverList');
+  if(sk&&!sk.querySelector('.dcard')) sk.innerHTML='<div class="skel"></div>'.repeat(4);
   try{
     const rows=await sbRest('drivers?select=*&is_active=eq.true&order=rank_score.desc');
     if(Array.isArray(rows)&&rows.length){ drivers=rows.map(mapDriver); }

@@ -8,7 +8,9 @@ function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp
 function initials(n){ return (n||'?').trim().split(/\s+/).map(w=>w[0]||'').slice(0,2).join('').toUpperCase(); }
 function fmtInt(n){ return Number(n||0).toLocaleString('fr-FR'); }
 function fmtMoney(x){ x=Number(x||0); if(x>=1e6) return (x/1e6).toLocaleString('fr-FR',{maximumFractionDigits:2})+' M'; if(x>=1e4) return Math.round(x/1e3)+' K'; return fmtInt(x); }
-function setTxt(id,v){ const e=document.getElementById(id); if(e) e.textContent=v; }
+function setTxt(id,v){ const e=document.getElementById(id); if(!e) return;
+  const changed=e.textContent!==String(v); e.textContent=v;
+  if(changed&&e.classList&&e.classList.contains('val')){ e.classList.remove('bump'); void e.offsetWidth; e.classList.add('bump'); } }
 function emptyRow(cols,msg){ return `<tr><td colspan="${cols}" class="sub" style="text-align:center;padding:26px">${msg}</td></tr>`; }
 function atoast(m){ const t=document.getElementById('atoast'); if(!t) return; t.textContent=m; t.classList.add('on'); clearTimeout(atoast._t); atoast._t=setTimeout(()=>t.classList.remove('on'),1900); }
 function relDate(iso){ const d=new Date(iso), n=new Date(); const days=Math.floor((n-d)/864e5); if(days<=0) return "Aujourd'hui"; if(days===1) return 'Hier'; if(days<7) return days+' j'; return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}); }
@@ -130,7 +132,7 @@ function renderChart(){
   const val=v=> unit==='M'?(v/1e6).toFixed(1): unit==='K'?Math.round(v/1e3): v;
   setTxt('chartSub','Recettes mensuelles, '+ADM.months+' derniers mois'+(unit?(' ('+(unit==='M'?'millions':'milliers')+' DH)'):' (DH)'));
   document.getElementById('chart').innerHTML=buckets.map((b,i)=>`
-    <div class="bar-wrap"><div class="bar" style="height:${Math.max(2,b.sum/max*100)}%;${i===buckets.length-1?'background:linear-gradient(180deg,#F2A03D,#e0891f)':''}"><span>${b.sum?val(b.sum)+unit:''}</span></div><small>${b.label}</small></div>`).join('');
+    <div class="bar-wrap"><div class="bar" style="height:${Math.max(2,b.sum/max*100)}%;animation-delay:${i*45}ms;${i===buckets.length-1?'background:linear-gradient(180deg,#F2A03D,#e0891f)':''}"><span>${b.sum?val(b.sum)+unit:''}</span></div><small>${b.label}</small></div>`).join('');
 }
 
 /* ---------------- donut packs ---------------- */
