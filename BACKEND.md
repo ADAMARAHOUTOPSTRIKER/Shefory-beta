@@ -76,7 +76,8 @@ Advisors sécurité : les seuls WARN restants concernent `is_admin` / `is_conver
 | `fatou@demo.shefory.app` | chauffeur | Bronze |
 | `moussa@demo.shefory.app` | chauffeur | gratuit (non vérifié) |
 | `client@demo.shefory.app` | client | — |
-| `admin@demo.shefory.app` | admin | — |
+
+> Le compte admin (`admin@demo.shefory.app`) a un **mot de passe privé** (changé depuis la mise en ligne publique — transmis au propriétaire hors dépôt).
 
 ## État du câblage front
 
